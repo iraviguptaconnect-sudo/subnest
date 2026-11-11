@@ -75,3 +75,28 @@ INSERT INTO public.site_settings (id, upi_id, merchant_name, whatsapp_number)
 VALUES ('singleton', '9347610989@pthdfc', 'NAMAN JAIN', '919347610989')
 ON CONFLICT (id) DO NOTHING;
 
+-- 6. Products Catalog Table (for Cloud CRUD)
+CREATE TABLE IF NOT EXISTS public.products (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'OTT',
+    tagline TEXT DEFAULT '',
+    description TEXT DEFAULT '',
+    image TEXT NOT NULL,
+    popular BOOLEAN DEFAULT false,
+    delivery_type TEXT DEFAULT 'On Your Number',
+    devices TEXT DEFAULT '1 Device',
+    features JSONB DEFAULT '[]'::jsonb,
+    plans JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read products" ON public.products FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Public insert products" ON public.products FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Public update products" ON public.products FOR UPDATE TO anon, authenticated USING (true);
+CREATE POLICY "Public delete products" ON public.products FOR DELETE TO anon, authenticated USING (true);
+
+

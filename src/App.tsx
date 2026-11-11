@@ -17,12 +17,76 @@ import { WhatsAppFloat } from './components/WhatsAppFloat';
 import { SplashScreen } from './components/SplashScreen';
 import { PRODUCTS } from './data/products';
 import { Product, PlanOption } from './types';
+import { fetchProductsFromSupabase, upsertProductInSupabase, deleteProductFromSupabase } from './lib/supabase';
 
 export const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [showCombo, setShowCombo] = useState(true);
+
+  // Dynamic Catalog products state (backed by localStorage and Supabase)
+  const [products, setProducts] = useState<Product[]>(() => {
+    const saved = localStorage.getItem('subnest_products_catalog');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+    }
+    return PRODUCTS;
+  });
+
+  // Try loading products from Supabase on start
+  useEffect(() => {
+    fetchProductsFromSupabase().then((dbProds) => {
+      if (dbProds && dbProds.length > 0) {
+        const mapped: Product[] = dbProds.map((p) => ({
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          tagline: p.tagline,
+          description: p.description,
+          image: p.image,
+          popular: p.popular,
+          deliveryType: p.delivery_type || p.deliveryType,
+          devices: p.devices,
+          features: p.features || [],
+          plans: p.plans || [],
+        }));
+        setProducts(mapped);
+        localStorage.setItem('subnest_products_catalog', JSON.stringify(mapped));
+      }
+    });
+  }, []);
+
+  const handleSaveProduct = (updated: Product) => {
+    setProducts((prev) => {
+      const exists = prev.some((p) => p.id === updated.id);
+      const next = exists
+        ? prev.map((p) => (p.id === updated.id ? updated : p))
+        : [updated, ...prev];
+      localStorage.setItem('subnest_products_catalog', JSON.stringify(next));
+      return next;
+    });
+    upsertProductInSupabase(updated);
+  };
+
+  const handleDeleteProduct = (productId: string) => {
+    setProducts((prev) => {
+      const next = prev.filter((p) => p.id !== productId);
+      localStorage.setItem('subnest_products_catalog', JSON.stringify(next));
+      return next;
+    });
+    deleteProductFromSupabase(productId);
+  };
+
+  const handleResetProducts = () => {
+    if (window.confirm('Reset catalog to default 23 products?')) {
+      setProducts(PRODUCTS);
+      localStorage.setItem('subnest_products_catalog', JSON.stringify(PRODUCTS));
+    }
+  };
 
   // Active view: null = Catalog, Product = ProductDetailPage
   const [activeProduct, setActiveProduct] = useState<Product | null>(null);
@@ -67,7 +131,7 @@ export const App: React.FC = () => {
       }
       if (hash.startsWith('#product-')) {
         const prodId = hash.replace('#product-', '');
-        const found = PRODUCTS.find((p) => p.id === prodId);
+        const found = products.find((p) => p.id === prodId) || PRODUCTS.find((p) => p.id === prodId);
         if (found) {
           setActiveProduct(found);
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -170,7 +234,7 @@ export const App: React.FC = () => {
         /* PRODUCT DETAIL VIEW (EXACT IMAGE 2 REPLICA) */
         <ProductDetailPage
           product={activeProduct}
-          allProducts={PRODUCTS}
+          allProducts={products}
           onBack={handleBackToCatalog}
           onSelectRelated={handleSelectProduct}
           onBuyNow={handleBuyNowFromDetail}
@@ -205,14 +269,14 @@ export const App: React.FC = () => {
             {/* Custom OTT Combo Builder */}
             {showCombo && (
               <ComboBuilder
-                products={PRODUCTS}
+                products={products}
                 onOrderCombo={handleOrderCombo}
               />
             )}
 
             {/* Product Catalog Grid */}
             <ProductList
-              products={PRODUCTS}
+              products={products}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               onSelectProduct={handleSelectProduct}
@@ -255,7 +319,7 @@ export const App: React.FC = () => {
         onClose={() => setIsTrackingOpen(false)}
       />
 
-      {/* Admin Orders Modal (Shift + A or #admin) */}
+      {/* Admin Orders & Products Modal (Shift + A or #admin) */}
       <AdminOrdersModal
         isOpen={isAdminOpen}
         onClose={() => {
@@ -264,6 +328,10 @@ export const App: React.FC = () => {
             window.location.hash = '';
           }
         }}
+        products={products}
+        onSaveProduct={handleSaveProduct}
+        onDeleteProduct={handleDeleteProduct}
+        onResetProducts={handleResetProducts}
       />
 
     </div>

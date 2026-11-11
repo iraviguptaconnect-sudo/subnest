@@ -127,3 +127,80 @@ export async function updateOrderStatus(orderId: string, status: DbOrder['status
   }
 }
 
+/**
+ * Fetch products from Supabase (if table exists)
+ */
+export async function fetchProductsFromSupabase(): Promise<any[] | null> {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      // Table might not exist yet, fallback gracefully
+      return null;
+    }
+    return data || [];
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Upsert product in Supabase
+ */
+export async function upsertProductInSupabase(prod: any): Promise<boolean> {
+  try {
+    const row = {
+      id: prod.id,
+      name: prod.name,
+      category: prod.category || 'OTT',
+      tagline: prod.tagline || '',
+      description: prod.description || '',
+      image: prod.image,
+      popular: !!prod.popular,
+      delivery_type: prod.deliveryType,
+      devices: prod.devices,
+      features: prod.features || [],
+      plans: prod.plans || [],
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase
+      .from('products')
+      .upsert(row, { onConflict: 'id' });
+
+    if (error) {
+      console.warn('[Supabase] upsertProduct error:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Supabase] upsertProduct exception:', err);
+    return false;
+  }
+}
+
+/**
+ * Delete product from Supabase
+ */
+export async function deleteProductFromSupabase(productId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', productId);
+
+    if (error) {
+      console.warn('[Supabase] deleteProduct error:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Supabase] deleteProduct exception:', err);
+    return false;
+  }
+}
+
+
