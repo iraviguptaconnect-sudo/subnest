@@ -9,10 +9,27 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
   onComplete,
   durationMs = 1400,
 }) => {
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = window.location.pathname.toLowerCase();
+      const h = window.location.hash.toLowerCase();
+      if (p.startsWith('/admin') || h === '#admin') return false;
+    }
+    return true;
+  });
   const [fading, setFading] = useState(false);
 
   useEffect(() => {
+    // If admin route, skip splash screen immediately
+    if (
+      typeof window !== 'undefined' &&
+      (window.location.pathname.toLowerCase().startsWith('/admin') ||
+       window.location.hash.toLowerCase() === '#admin')
+    ) {
+      setVisible(false);
+      return;
+    }
+
     // Start fading out after durationMs
     const fadeTimer = setTimeout(() => {
       setFading(true);

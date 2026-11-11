@@ -121,16 +121,27 @@ export const App: React.FC = () => {
     setIsDarkMode((prev) => !prev);
   };
 
-  // URL Hash handling for deep linking & back button support
+  // URL Hash & Path handling for deep linking & back button support (/admin, #admin, #product-*)
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash;
-      if (hash === '#admin') {
+    const handleLocationChange = () => {
+      const path = (window.location.pathname || '').toLowerCase().replace(/\/+$/, '') || '/';
+      const hash = (window.location.hash || '').toLowerCase();
+
+      // Check admin route via pathname (/admin) or hash (#admin)
+      if (path === '/admin' || path.startsWith('/admin/') || hash === '#admin') {
         setIsAdminOpen(true);
         return;
       }
+
+      // Check product route via hash (#product-netflix) or pathname (/product/netflix)
+      let prodId: string | null = null;
       if (hash.startsWith('#product-')) {
-        const prodId = hash.replace('#product-', '');
+        prodId = hash.replace('#product-', '');
+      } else if (path.startsWith('/product/')) {
+        prodId = path.replace('/product/', '');
+      }
+
+      if (prodId) {
         const found = products.find((p) => p.id === prodId) || PRODUCTS.find((p) => p.id === prodId);
         if (found) {
           setActiveProduct(found);
@@ -138,6 +149,7 @@ export const App: React.FC = () => {
           return;
         }
       }
+
       setActiveProduct(null);
     };
 
@@ -148,14 +160,16 @@ export const App: React.FC = () => {
       }
     };
 
-    handleHashChange();
-    window.addEventListener('hashchange', handleHashChange);
+    handleLocationChange();
+    window.addEventListener('hashchange', handleLocationChange);
+    window.addEventListener('popstate', handleLocationChange);
     window.addEventListener('keydown', handleKeyDown);
     return () => {
-      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+      window.removeEventListener('popstate', handleLocationChange);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [products]);
 
   const handleSelectProduct = (product: Product) => {
     setActiveProduct(product);
@@ -319,13 +333,18 @@ export const App: React.FC = () => {
         onClose={() => setIsTrackingOpen(false)}
       />
 
-      {/* Admin Orders & Products Modal (Shift + A or #admin) */}
+      {/* Admin Orders & Products Modal (Shift + A or /admin or #admin) */}
       <AdminOrdersModal
         isOpen={isAdminOpen}
         onClose={() => {
           setIsAdminOpen(false);
-          if (window.location.hash === '#admin') {
+          const path = (window.location.pathname || '').toLowerCase();
+          const hash = window.location.hash;
+          if (hash === '#admin') {
             window.location.hash = '';
+          }
+          if (path === '/admin' || path.startsWith('/admin/')) {
+            window.history.pushState(null, '', '/');
           }
         }}
         products={products}

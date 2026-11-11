@@ -195,7 +195,7 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
       {/* Backdrop */}
       <div onClick={onClose} className="fixed inset-0 bg-background/90 backdrop-blur-md" />
 
