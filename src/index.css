@@ -1,0 +1,275 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 230 25% 98%;
+    --foreground: 235 25% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 235 25% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 235 25% 10%;
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 235 20% 94%;
+    --secondary-foreground: 235 15% 35%;
+    --muted: 235 20% 94%;
+    --muted-foreground: 235 12% 45%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --border: 230 16% 88%;
+    --input: 230 16% 86%;
+    --ring: 262 83% 58%;
+    --radius: 0.875rem;
+    --card-radius: 1rem;
+    --ambient-blue: 217 91% 60%;
+    --ambient-cyan: 195 95% 55%;
+    --storefront-radius-card: 22px;
+    --storefront-radius-button: 15px;
+    --storefront-radius-field: 16px;
+    --storefront-radius-badge: 10px;
+    --storefront-radius-media: 24px;
+    --storefront-artwork-inset: 0px;
+    --storefront-shadow: 0 4px 16px rgba(124, 58, 237, 0.08);
+    --storefront-overlay-surface: 0 0% 100%;
+    --storefront-overlay-radius: 28px;
+    --shadow-ink: 0 0% 0%;
+    --artwork-surface: 235 20% 96%;
+    --rating: 35 90% 38%;
+    color-scheme: light;
+  }
+
+  .dark {
+    --background: 235 28% 5%;
+    --foreground: 0 0% 98%;
+    --card: 235 22% 8.5%;
+    --card-foreground: 0 0% 98%;
+    --popover: 235 22% 8.5%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 262 83% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 235 20% 13%;
+    --secondary-foreground: 235 15% 75%;
+    --muted: 235 20% 13%;
+    --muted-foreground: 235 12% 58%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 142 76% 40%;
+    --success-foreground: 0 0% 100%;
+    --border: 235 20% 18%;
+    --input: 235 20% 16%;
+    --ring: 262 83% 60%;
+    --radius: 0.875rem;
+    --card-radius: 1rem;
+    --ambient-blue: 217 91% 60%;
+    --ambient-cyan: 195 95% 55%;
+    --storefront-radius-card: 22px;
+    --storefront-radius-button: 15px;
+    --storefront-radius-field: 16px;
+    --storefront-radius-badge: 10px;
+    --storefront-radius-media: 24px;
+    --storefront-artwork-inset: 0px;
+    --storefront-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    --storefront-overlay-surface: 235 22% 7.5%;
+    --storefront-overlay-radius: 28px;
+    --shadow-ink: 0 0% 0%;
+    --artwork-surface: 235 28% 5%;
+    --rating: 43 96% 56%;
+    color-scheme: dark;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+}
+
+/* ───────── Animations ───────── */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-out {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes pulse-red {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(1.05); }
+}
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 8px hsl(var(--primary) / 0.3); }
+  50%      { box-shadow: 0 0 20px hsl(var(--primary) / 0.5); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+@keyframes luxury-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.05); opacity: 0.92; }
+}
+@keyframes luxury-glow {
+  0%, 100% { filter: drop-shadow(0 0 15px rgba(124, 58, 237, 0.25)); }
+  50%      { filter: drop-shadow(0 0 40px rgba(124, 58, 237, 0.6)) drop-shadow(0 0 65px rgba(59, 130, 246, 0.45)); }
+}
+@keyframes luxury-text {
+  0%   { opacity: 0; transform: translateY(16px); letter-spacing: 0.12em; }
+  100% { opacity: 1; transform: translateY(0); letter-spacing: 0.18em; }
+}
+@keyframes luxury-fade {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.96); }
+}
+@keyframes marquee-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes marquee-scroll-reverse {
+  0%   { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+@keyframes smooth-pulse {
+  0%, 100% { opacity: 0.92; }
+  50%      { opacity: 1; }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s ease-out forwards;
+  opacity: 0;
+}
+.animate-fade-out {
+  animation: fade-out 0.6s ease-out forwards;
+}
+.animate-pulse-red {
+  animation: pulse-red 2s ease-in-out infinite;
+}
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+.animate-luxury-pulse {
+  animation: luxury-pulse 2.2s ease-in-out infinite;
+}
+.animate-luxury-glow {
+  animation: luxury-glow 2.2s ease-in-out infinite;
+}
+.animate-luxury-text {
+  animation: luxury-text 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.animate-luxury-fade {
+  animation: luxury-fade 0.6s ease-out forwards;
+}
+.animate-smooth-pulse {
+  animation: smooth-pulse 3s ease-in-out infinite;
+}
+
+/* ───────── Marquee ───────── */
+.marquee-track {
+  display: flex;
+  gap: 18px;
+  width: max-content;
+  will-change: transform;
+}
+.marquee-right {
+  animation: marquee-scroll 35s linear infinite;
+}
+.marquee-left {
+  animation: marquee-scroll-reverse 35s linear infinite;
+}
+.marquee-track-wrap {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-right, .marquee-left { animation-play-state: paused; transform: none !important; }
+}
+
+/* ───────── Storefront card system ───────── */
+.storefront-card {
+  border-radius: var(--storefront-radius-card);
+  box-shadow: var(--storefront-shadow);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.storefront-media {
+  aspect-ratio: 1 / 1;
+  height: auto;
+  margin: 5px 5px 0;
+  width: calc(100% - 10px);
+  overflow: hidden;
+  border-radius: calc(var(--storefront-radius-card) - 5px);
+}
+.storefront-badge {
+  border-radius: var(--storefront-radius-badge);
+}
+.storefront-button {
+  border-radius: var(--storefront-radius-button);
+}
+.storefront-field {
+  border-radius: var(--storefront-radius-field);
+}
+.storefront-card-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  height: 2.75em;
+}
+
+/* ───────── Scrollbar ───────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: hsl(var(--background)); }
+::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+
+/* ───────── No-scrollbar utility ───────── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ───────── Storefront detail page (Image 2 Replica) ───────── */
+.storefront-detail-container {
+  max-width: 960px;
+}
+.storefront-product-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  align-items: start;
+  gap: 24px;
+}
+@media (max-width: 768px) {
+  .storefront-product-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+.storefront-detail-media {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  border-radius: var(--storefront-radius-media);
+}
+.storefront-section-overlay {
+  position: relative;
+  padding: 20px;
+  border-radius: var(--storefront-overlay-radius);
+  background: hsl(var(--storefront-overlay-surface) / 0.94);
+  border: 1px solid hsl(var(--border) / 0.8);
+}
+.storefront-back {
+  border-radius: 50%;
+}
