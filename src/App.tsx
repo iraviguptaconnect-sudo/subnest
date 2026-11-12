@@ -22,7 +22,20 @@ import { fetchProductsFromSupabase, upsertProductInSupabase, deleteProductFromSu
 export const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const path = (window.location.pathname || '').toLowerCase().replace(/\/+$/, '') || '/';
+      const hash = (window.location.hash || '').toLowerCase();
+      const search = (window.location.search || '').toLowerCase();
+      return (
+        path === '/admin' ||
+        path.startsWith('/admin') ||
+        hash === '#admin' ||
+        search.includes('admin=true')
+      );
+    }
+    return false;
+  });
   const [showCombo, setShowCombo] = useState(true);
 
   // Dynamic Catalog products state (backed by localStorage and Supabase)
@@ -121,14 +134,20 @@ export const App: React.FC = () => {
     setIsDarkMode((prev) => !prev);
   };
 
-  // URL Hash & Path handling for deep linking & back button support (/admin, #admin, #product-*)
+  // URL Hash & Path handling for deep linking & back button support (/admin, #admin, ?admin=true, #product-*)
   useEffect(() => {
     const handleLocationChange = () => {
       const path = (window.location.pathname || '').toLowerCase().replace(/\/+$/, '') || '/';
       const hash = (window.location.hash || '').toLowerCase();
+      const search = (window.location.search || '').toLowerCase();
 
-      // Check admin route via pathname (/admin) or hash (#admin)
-      if (path === '/admin' || path.startsWith('/admin/') || hash === '#admin') {
+      // Check admin route via pathname (/admin), hash (#admin), or search (?admin=true)
+      if (
+        path === '/admin' ||
+        path.startsWith('/admin') ||
+        hash === '#admin' ||
+        search.includes('admin=true')
+      ) {
         setIsAdminOpen(true);
         return;
       }
@@ -264,6 +283,7 @@ export const App: React.FC = () => {
             onOpenCombo={handleScrollToCombo}
             onOpenTracking={() => setIsTrackingOpen(true)}
             onOpenReviews={handleScrollToReviews}
+            onOpenAdmin={() => setIsAdminOpen(true)}
           />
 
           <main className="flex-1">
@@ -311,6 +331,7 @@ export const App: React.FC = () => {
             onViewPlans={handleScrollToPlans}
             onOpenCombo={handleScrollToCombo}
             onOpenTracking={() => setIsTrackingOpen(true)}
+            onOpenAdmin={() => setIsAdminOpen(true)}
           />
         </>
       )}
@@ -343,7 +364,7 @@ export const App: React.FC = () => {
           if (hash === '#admin') {
             window.location.hash = '';
           }
-          if (path === '/admin' || path.startsWith('/admin/')) {
+          if (path === '/admin' || path.startsWith('/admin') || window.location.search.includes('admin=')) {
             window.history.pushState(null, '', '/');
           }
         }}

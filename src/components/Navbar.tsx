@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Package, MessageCircle, Moon, Sun, Menu, X, ArrowRight } from 'lucide-react';
+import { Sparkles, Package, MessageCircle, Moon, Sun, Menu, X, ArrowRight, ShieldCheck } from 'lucide-react';
 
 interface NavbarProps {
   onOpenTracking: () => void;
   onOpenCombo: () => void;
   onViewPlans: () => void;
   onOpenReviews?: () => void;
+  onOpenAdmin?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -13,6 +14,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenCombo,
   onViewPlans,
   onOpenReviews,
+  onOpenAdmin,
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -136,6 +138,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </button>
 
+          {/* Admin Portal Direct Trigger Button */}
+          {onOpenAdmin && (
+            <button
+              type="button"
+              onClick={onOpenAdmin}
+              aria-label="Admin Portal"
+              title="Admin Portal (Manage Orders & Products)"
+              className="h-9 w-9 sm:h-10 sm:w-10 shrink-0 rounded-full border border-border bg-card text-muted-foreground hover:text-primary hover:border-primary/50 flex items-center justify-center transition-all shadow-sm cursor-pointer group"
+            >
+              <ShieldCheck className="w-4 h-4 text-violet-400 group-hover:scale-110 transition-transform" />
+            </button>
+          )}
+
           {/* Mobile Hamburger Toggle */}
           <button
             type="button"
@@ -213,6 +228,24 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
               <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
             </button>
+
+            {onOpenAdmin && (
+              <button
+                onClick={() => {
+                  onOpenAdmin();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="flex items-center justify-between py-2 text-xs font-bold text-violet-400 hover:text-violet-300 transition-colors text-left border-b border-border/50"
+              >
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-violet-400" />
+                  <span>Admin Workspace</span>
+                </div>
+                <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-mono">
+                  Manager
+                </span>
+              </button>
+            )}
           </div>
 
           {/* Mobile WhatsApp Button */}

@@ -5,12 +5,14 @@ interface FooterProps {
   onOpenTracking: () => void;
   onOpenCombo: () => void;
   onViewPlans: () => void;
+  onOpenAdmin?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   onOpenTracking,
   onOpenCombo,
   onViewPlans,
+  onOpenAdmin,
 }) => {
   return (
     <footer className="border-t border-border bg-card/60 pt-12 pb-8">
@@ -61,6 +63,17 @@ export const Footer: React.FC<FooterProps> = ({
                   Customer Stories & Reviews
                 </a>
               </li>
+              {onOpenAdmin && (
+                <li>
+                  <button
+                    onClick={onOpenAdmin}
+                    className="text-violet-400 hover:text-violet-300 font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Admin Portal</span>
+                  </button>
+                </li>
+              )}
             </ul>
           </div>
 
@@ -108,12 +121,23 @@ export const Footer: React.FC<FooterProps> = ({
         {/* Bottom Credits */}
         <div className="pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
           <p>© 2026 Subnest. All rights reserved. | Built with ❤️ for subscription lovers</p>
-          <div className="flex gap-4">
+          <div className="flex items-center gap-4">
             <span className="hover:text-foreground cursor-pointer">Privacy</span>
             <span>·</span>
             <span className="hover:text-foreground cursor-pointer">Terms</span>
             <span>·</span>
             <span className="hover:text-foreground cursor-pointer">Refund</span>
+            {onOpenAdmin && (
+              <>
+                <span>·</span>
+                <button
+                  onClick={onOpenAdmin}
+                  className="hover:text-violet-400 text-muted-foreground transition-colors cursor-pointer"
+                >
+                  Admin
+                </button>
+              </>
+            )}
           </div>
         </div>
 

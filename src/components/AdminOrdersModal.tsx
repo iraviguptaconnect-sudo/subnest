@@ -55,40 +55,53 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
 
-  // Load orders
+  // Load orders safely
   const loadOrders = async () => {
     setLoadingOrders(true);
-    const cloudOrders = await fetchAllOrdersForAdmin();
-    const local = JSON.parse(
-      localStorage.getItem('subnest_orders') ||
-        localStorage.getItem('nexora_orders') ||
-        '[]'
-    );
-    const mappedLocal: DbOrder[] = local.map((l: any) => ({
-      order_id: l.orderId,
-      product_name: l.itemName,
-      amount: l.amount,
-      customer_name: l.fullName,
-      customer_phone: l.phone,
-      customer_email: l.email,
-      utr_number: l.utrNumber,
-      status: l.status?.toLowerCase().includes('deliver')
-        ? 'credentials_sent'
-        : l.status?.toLowerCase().includes('verif')
-        ? 'verified'
-        : 'pending_verification',
-      created_at: l.date,
-    }));
-
-    const merged = [...cloudOrders];
-    for (const loc of mappedLocal) {
-      if (!merged.some((o) => o.order_id === loc.order_id)) {
-        merged.push(loc);
+    try {
+      const cloudOrders = await fetchAllOrdersForAdmin();
+      let local: any[] = [];
+      try {
+        const saved =
+          localStorage.getItem('subnest_orders') ||
+          localStorage.getItem('nexora_orders');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) local = parsed;
+        }
+      } catch (err) {
+        console.warn('Local orders parse error:', err);
       }
-    }
 
-    setOrders(merged);
-    setLoadingOrders(false);
+      const mappedLocal: DbOrder[] = local.map((l: any) => ({
+        order_id: l.orderId || 'ORD-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
+        product_name: l.itemName || 'Subscription',
+        amount: Number(l.amount) || 0,
+        customer_name: l.fullName || 'Customer',
+        customer_phone: l.phone || '',
+        customer_email: l.email || '',
+        utr_number: l.utrNumber || 'N/A',
+        status: (l.status || '').toLowerCase().includes('deliver')
+          ? 'credentials_sent'
+          : (l.status || '').toLowerCase().includes('verif')
+          ? 'verified'
+          : 'pending_verification',
+        created_at: l.date || new Date().toISOString(),
+      }));
+
+      const merged = [...(cloudOrders || [])];
+      for (const loc of mappedLocal) {
+        if (!merged.some((o) => o.order_id === loc.order_id)) {
+          merged.push(loc);
+        }
+      }
+
+      setOrders(merged);
+    } catch (err) {
+      console.error('Failed to load orders:', err);
+    } finally {
+      setLoadingOrders(false);
+    }
   };
 
   useEffect(() => {
