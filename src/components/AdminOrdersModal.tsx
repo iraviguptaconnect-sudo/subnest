@@ -17,6 +17,12 @@ import {
   AlertTriangle,
   Smartphone,
   ExternalLink,
+  Lock,
+  User,
+  Eye,
+  EyeOff,
+  LogOut,
+  KeyRound,
 } from 'lucide-react';
 import { fetchAllOrdersForAdmin, updateOrderStatus, DbOrder } from '../lib/supabase';
 import { Product, PlanOption } from '../types';
@@ -40,8 +46,125 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  // Active admin section: 'orders' | 'products'
-  const [activeSection, setActiveSection] = useState<'orders' | 'products'>('orders');
+  // ───────── AUTHENTICATION & SECURITY STATE ─────────
+  const getAdminCredentials = () => {
+    try {
+      const saved = localStorage.getItem('subnest_admin_creds');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.id && parsed.password) return parsed;
+      }
+    } catch {}
+    return {
+      id: (import.meta as any).env?.VITE_ADMIN_USER || 'admin',
+      password: (import.meta as any).env?.VITE_ADMIN_PASS || 'subnest@2026',
+    };
+  };
+
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const session = localStorage.getItem('subnest_admin_session');
+      if (session) {
+        try {
+          const parsed = JSON.parse(session);
+          if (parsed.expiresAt && Date.now() < parsed.expiresAt) {
+            return true;
+          }
+        } catch {}
+      }
+    }
+    return false;
+  });
+
+  const [loginId, setLoginId] = useState('');
+  const [loginPass, setLoginPass] = useState('');
+  const [showLoginPass, setShowLoginPass] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
+
+  // Security Credentials form
+  const [newAdminId, setNewAdminId] = useState('');
+  const [newAdminPass, setNewAdminPass] = useState('');
+  const [confirmAdminPass, setConfirmAdminPass] = useState('');
+  const [credSaveMsg, setCredSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Handle Login
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+
+    const creds = getAdminCredentials();
+    const cleanId = loginId.trim().toLowerCase();
+    const cleanExpectedId = creds.id.trim().toLowerCase();
+
+    // Check ID (also accept 'admin', 'naman', 'subnest' for standard setups)
+    const isIdValid =
+      cleanId === cleanExpectedId ||
+      (cleanExpectedId === 'admin' && (cleanId === 'naman' || cleanId === 'subnest'));
+
+    if (isIdValid && loginPass === creds.password) {
+      setIsAuthenticated(true);
+      setAuthError('');
+      const expiresAt = rememberMe
+        ? Date.now() + 14 * 24 * 60 * 60 * 1000 // 14 days
+        : Date.now() + 8 * 60 * 60 * 1000; // 8 hours
+      localStorage.setItem(
+        'subnest_admin_session',
+        JSON.stringify({ user: cleanId, loggedAt: Date.now(), expiresAt })
+      );
+    } else {
+      setAuthError('Incorrect Admin ID or Password. Please try again.');
+    }
+  };
+
+  // Handle Logout
+  const handleLogout = () => {
+    localStorage.removeItem('subnest_admin_session');
+    setIsAuthenticated(false);
+    setLoginPass('');
+    setAuthError('');
+  };
+
+  // Handle Saving New Credentials
+  const handleSaveCredentials = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCredSaveMsg(null);
+
+    if (!newAdminId.trim()) {
+      setCredSaveMsg({ type: 'error', text: 'Admin ID cannot be empty.' });
+      return;
+    }
+    if (newAdminPass.length < 4) {
+      setCredSaveMsg({ type: 'error', text: 'Password must be at least 4 characters long.' });
+      return;
+    }
+    if (newAdminPass !== confirmAdminPass) {
+      setCredSaveMsg({ type: 'error', text: 'Passwords do not match.' });
+      return;
+    }
+
+    localStorage.setItem(
+      'subnest_admin_creds',
+      JSON.stringify({ id: newAdminId.trim(), password: newAdminPass })
+    );
+    setCredSaveMsg({ type: 'success', text: 'Admin ID & Password updated successfully!' });
+    setNewAdminPass('');
+    setConfirmAdminPass('');
+  };
+
+  // Reset Credentials to default
+  const handleResetCredentials = () => {
+    if (window.confirm('Reset credentials to default: (admin / subnest@2026)?')) {
+      localStorage.removeItem('subnest_admin_creds');
+      setCredSaveMsg({ type: 'success', text: 'Credentials reset to default (admin / subnest@2026)' });
+      setNewAdminId('');
+      setNewAdminPass('');
+      setConfirmAdminPass('');
+    }
+  };
+
+  // Active admin section: 'orders' | 'products' | 'security'
+  const [activeSection, setActiveSection] = useState<'orders' | 'products' | 'security'>('orders');
 
   // Orders state
   const [orders, setOrders] = useState<DbOrder[]>([]);
@@ -105,8 +228,10 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
   };
 
   useEffect(() => {
-    loadOrders();
-  }, []);
+    if (isAuthenticated) {
+      loadOrders();
+    }
+  }, [isAuthenticated]);
 
   const handleStatusChange = async (orderId: string, newStatus: DbOrder['status']) => {
     setOrders((prev) =>
@@ -207,6 +332,139 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
     setIsCreatingNew(false);
   };
 
+  // ───────── UN-AUTHENTICATED: LOGIN SCREEN ─────────
+  if (!isAuthenticated) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4">
+        {/* Backdrop */}
+        <div onClick={onClose} className="fixed inset-0 bg-background/90 backdrop-blur-md" />
+
+        {/* Login Dialog Card */}
+        <div className="relative bg-card border border-border rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl z-10 flex flex-col items-center">
+          
+          {/* Top Close Button */}
+          <div className="w-full flex justify-end">
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-full bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              title="Close and Return to Storefront"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Logo Badge */}
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 via-violet-500/20 to-blue-500/20 border border-violet-500/30 flex items-center justify-center p-2 mb-3 shadow-lg shadow-violet-500/10">
+            <img
+              src="/assets/subnest-logo.png"
+              alt="Subnest"
+              className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(124,58,237,0.3)]"
+            />
+          </div>
+
+          <h3 className="text-xl font-black tracking-tight text-foreground text-center">
+            Subnest Admin Access
+          </h3>
+          <p className="text-xs text-muted-foreground text-center mt-1">
+            Restricted area. Enter your ID & Password to manage orders and catalog.
+          </p>
+
+          {/* Error Alert */}
+          {authError && (
+            <div className="w-full mt-4 p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{authError}</span>
+            </div>
+          )}
+
+          {/* Login Form */}
+          <form onSubmit={handleLogin} className="w-full mt-5 space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-foreground mb-1.5">
+                Admin ID / Username
+              </label>
+              <div className="relative">
+                <User className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  placeholder="admin"
+                  value={loginId}
+                  onChange={(e) => setLoginId(e.target.value)}
+                  className="storefront-field w-full pl-10 pr-3 py-2.5 text-xs bg-background border border-input text-foreground focus:outline-none focus:border-primary rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-foreground mb-1.5">
+                Admin Password
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type={showLoginPass ? 'text' : 'password'}
+                  required
+                  placeholder="••••••••"
+                  value={loginPass}
+                  onChange={(e) => setLoginPass(e.target.value)}
+                  className="storefront-field w-full pl-10 pr-10 py-2.5 text-xs bg-background border border-input text-foreground focus:outline-none focus:border-primary rounded-xl"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPass(!showLoginPass)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer p-0.5"
+                >
+                  {showLoginPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs">
+              <label className="flex items-center gap-2 cursor-pointer text-muted-foreground hover:text-foreground select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="rounded border-border accent-primary w-3.5 h-3.5"
+                />
+                <span>Remember me for 14 days</span>
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <KeyRound className="w-4 h-4" />
+              <span>Login to Admin Workspace</span>
+            </button>
+          </form>
+
+          {/* Quick Info & Cancel */}
+          <div className="w-full mt-5 pt-4 border-t border-border/60 flex flex-col items-center gap-2">
+            <div className="p-2.5 rounded-xl bg-secondary/50 border border-border/80 text-[11px] text-muted-foreground text-center w-full">
+              <span>Default Credentials: </span>
+              <span className="font-mono text-foreground font-bold">admin</span>
+              <span> / </span>
+              <span className="font-mono text-foreground font-bold">subnest@2026</span>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer mt-1"
+            >
+              ← Cancel & Back to Storefront
+            </button>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
+  // ───────── AUTHENTICATED: ADMIN WORKSPACE ─────────
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
       {/* Backdrop */}
@@ -222,8 +480,13 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-foreground">Subnest Admin Workspace</h2>
-              <p className="text-[11px] text-muted-foreground">Manage Live Orders & Products Catalog</p>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-foreground">Subnest Admin Workspace</h2>
+                <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                  Authorized
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">Manage Live Orders, Products & Security</p>
             </div>
           </div>
 
@@ -237,6 +500,16 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
                 <RefreshCw className={`w-4 h-4 ${loadingOrders ? 'animate-spin text-primary' : ''}`} />
               </button>
             )}
+
+            <button
+              onClick={handleLogout}
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-destructive/10 hover:bg-destructive/20 border border-destructive/20 text-destructive flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-colors"
+              title="Log Out of Admin"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
+
             <button
               onClick={onClose}
               className="px-3 py-1.5 rounded-xl bg-secondary hover:bg-secondary/80 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
@@ -248,7 +521,7 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
           </div>
         </div>
 
-        {/* Section Navigation Tabs: Orders vs Products */}
+        {/* Section Navigation Tabs: Orders vs Products vs Security */}
         <div className="flex items-center justify-between border-b border-border py-2.5">
           <div className="flex items-center gap-2">
             <button
@@ -273,6 +546,18 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
             >
               <Package className="w-3.5 h-3.5" />
               <span>Manage Products ({products.length})</span>
+            </button>
+
+            <button
+              onClick={() => setActiveSection('security')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                activeSection === 'security'
+                  ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25'
+                  : 'bg-secondary/60 text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>Security & Password</span>
             </button>
           </div>
 
@@ -849,6 +1134,107 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
 
               </form>
 
+            </div>
+          </div>
+        )}
+
+        {/* ───────── TAB 3: SECURITY & PASSWORD SETTINGS ───────── */}
+        {activeSection === 'security' && (
+          <div className="flex-1 overflow-y-auto pt-4 max-w-lg mx-auto w-full space-y-5 pr-1">
+            <div className="p-5 rounded-2xl bg-secondary/40 border border-border space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">Admin Login Credentials</h3>
+                  <p className="text-xs text-muted-foreground">Change your Admin ID and Password</p>
+                </div>
+              </div>
+
+              {credSaveMsg && (
+                <div
+                  className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                    credSaveMsg.type === 'success'
+                      ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
+                      : 'bg-destructive/10 border border-destructive/30 text-destructive'
+                  }`}
+                >
+                  {credSaveMsg.type === 'success' ? <Check className="w-4 h-4 shrink-0" /> : <AlertTriangle className="w-4 h-4 shrink-0" />}
+                  <span>{credSaveMsg.text}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSaveCredentials} className="space-y-3.5">
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">
+                    New Admin ID / Username
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. admin or naman"
+                    value={newAdminId}
+                    onChange={(e) => setNewAdminId(e.target.value)}
+                    className="storefront-field w-full px-3 py-2 text-xs bg-background border border-input text-foreground rounded-xl"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="At least 4 characters"
+                    value={newAdminPass}
+                    onChange={(e) => setNewAdminPass(e.target.value)}
+                    className="storefront-field w-full px-3 py-2 text-xs bg-background border border-input text-foreground rounded-xl"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Repeat new password"
+                    value={confirmAdminPass}
+                    onChange={(e) => setConfirmAdminPass(e.target.value)}
+                    className="storefront-field w-full px-3 py-2 text-xs bg-background border border-input text-foreground rounded-xl"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={handleResetCredentials}
+                    className="text-xs text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                  >
+                    Reset to Default
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-md hover:bg-primary/90 cursor-pointer"
+                  >
+                    Save Credentials
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-secondary/20 border border-border text-xs text-muted-foreground space-y-2">
+              <p className="font-semibold text-foreground flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+                <span>Session Security</span>
+              </p>
+              <p>
+                Your active session is remembered for 14 days on this browser. When you are done managing orders from a shared computer or mobile device, always click <strong className="text-foreground">Logout</strong>.
+              </p>
             </div>
           </div>
         )}
