@@ -63,17 +63,6 @@ export const Footer: React.FC<FooterProps> = ({
                   Customer Stories & Reviews
                 </a>
               </li>
-              {onOpenAdmin && (
-                <li>
-                  <button
-                    onClick={onOpenAdmin}
-                    className="text-violet-400 hover:text-violet-300 font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>Admin Portal</span>
-                  </button>
-                </li>
-              )}
             </ul>
           </div>
 
@@ -127,17 +116,6 @@ export const Footer: React.FC<FooterProps> = ({
             <span className="hover:text-foreground cursor-pointer">Terms</span>
             <span>·</span>
             <span className="hover:text-foreground cursor-pointer">Refund</span>
-            {onOpenAdmin && (
-              <>
-                <span>·</span>
-                <button
-                  onClick={onOpenAdmin}
-                  className="hover:text-violet-400 text-muted-foreground transition-colors cursor-pointer"
-                >
-                  Admin
-                </button>
-              </>
-            )}
           </div>
         </div>
 

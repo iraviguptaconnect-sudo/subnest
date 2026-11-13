@@ -88,10 +88,20 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
   const [confirmAdminPass, setConfirmAdminPass] = useState('');
   const [credSaveMsg, setCredSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Handle Login
+  // Handle Login with Brute-force Protection
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
+
+    // Check lock
+    try {
+      const lockData = JSON.parse(localStorage.getItem('subnest_auth_lock') || '{}');
+      if (lockData.lockedUntil && Date.now() < lockData.lockedUntil) {
+        const remainingMinutes = Math.ceil((lockData.lockedUntil - Date.now()) / 60000);
+        setAuthError(`Too many failed attempts. Login locked for ${remainingMinutes} more minute(s).`);
+        return;
+      }
+    } catch {}
 
     const creds = getAdminCredentials();
     const cleanId = loginId.trim().toLowerCase();
@@ -105,6 +115,7 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
     if (isIdValid && loginPass === creds.password) {
       setIsAuthenticated(true);
       setAuthError('');
+      localStorage.removeItem('subnest_auth_lock');
       const expiresAt = rememberMe
         ? Date.now() + 14 * 24 * 60 * 60 * 1000 // 14 days
         : Date.now() + 8 * 60 * 60 * 1000; // 8 hours
@@ -113,7 +124,22 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
         JSON.stringify({ user: cleanId, loggedAt: Date.now(), expiresAt })
       );
     } else {
-      setAuthError('Incorrect Admin ID or Password. Please try again.');
+      // Record failed attempt
+      let attempts = 1;
+      try {
+        const lockData = JSON.parse(localStorage.getItem('subnest_auth_lock') || '{}');
+        attempts = (lockData.attempts || 0) + 1;
+        if (attempts >= 5) {
+          const lockedUntil = Date.now() + 15 * 60 * 1000; // 15 mins lock
+          localStorage.setItem('subnest_auth_lock', JSON.stringify({ attempts, lockedUntil }));
+          setAuthError('Too many failed attempts. Login locked for 15 minutes.');
+          return;
+        }
+        localStorage.setItem('subnest_auth_lock', JSON.stringify({ attempts }));
+      } catch {}
+
+      const remaining = 5 - attempts;
+      setAuthError(`Incorrect Admin ID or Password. (${remaining} attempt${remaining === 1 ? '' : 's'} remaining)`);
     }
   };
 
@@ -442,18 +468,12 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
             </button>
           </form>
 
-          {/* Quick Info & Cancel */}
-          <div className="w-full mt-5 pt-4 border-t border-border/60 flex flex-col items-center gap-2">
-            <div className="p-2.5 rounded-xl bg-secondary/50 border border-border/80 text-[11px] text-muted-foreground text-center w-full">
-              <span>Default Credentials: </span>
-              <span className="font-mono text-foreground font-bold">admin</span>
-              <span> / </span>
-              <span className="font-mono text-foreground font-bold">subnest@2026</span>
-            </div>
+          {/* Cancel & Back to Storefront */}
+          <div className="w-full mt-5 pt-3 border-t border-border/60 flex justify-center">
             <button
               type="button"
               onClick={onClose}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer mt-1"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
               ← Cancel & Back to Storefront
             </button>

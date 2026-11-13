@@ -18,6 +18,20 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [logoSecretClicks, setLogoSecretClicks] = useState(0);
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    // Hidden Secret Easter Egg: 5 rapid taps on logo triggers Admin login
+    const next = logoSecretClicks + 1;
+    if (next >= 5) {
+      e.preventDefault();
+      if (onOpenAdmin) onOpenAdmin();
+      setLogoSecretClicks(0);
+      return;
+    }
+    setLogoSecretClicks(next);
+    setTimeout(() => setLogoSecretClicks(0), 2500);
+  };
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('theme');
@@ -70,10 +84,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             : 'bg-card/85 backdrop-blur-xl border-border shadow-md'
         }`}
       >
-        {/* Left: Brand Logo & Title */}
+        {/* Left: Brand Logo & Title (Hidden Easter Egg: 5 rapid taps triggers secret Admin login) */}
         <a
           href="/"
+          onClick={handleLogoClick}
           className="flex items-center gap-2.5 group cursor-pointer"
+          title="Subnest"
         >
           <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl overflow-hidden p-0.5 bg-gradient-to-br from-indigo-500/20 via-violet-500/20 to-blue-500/20 border border-violet-500/30 shadow-md shadow-violet-500/10 group-hover:scale-105 transition-transform shrink-0 flex items-center justify-center">
             <img
@@ -137,19 +153,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Moon className="w-4 h-4 text-primary" />
             )}
           </button>
-
-          {/* Admin Portal Direct Trigger Button */}
-          {onOpenAdmin && (
-            <button
-              type="button"
-              onClick={onOpenAdmin}
-              aria-label="Admin Portal"
-              title="Admin Portal (Manage Orders & Products)"
-              className="h-9 w-9 sm:h-10 sm:w-10 shrink-0 rounded-full border border-border bg-card text-muted-foreground hover:text-primary hover:border-primary/50 flex items-center justify-center transition-all shadow-sm cursor-pointer group"
-            >
-              <ShieldCheck className="w-4 h-4 text-violet-400 group-hover:scale-110 transition-transform" />
-            </button>
-          )}
 
           {/* Mobile Hamburger Toggle */}
           <button
@@ -228,24 +231,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
               <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
             </button>
-
-            {onOpenAdmin && (
-              <button
-                onClick={() => {
-                  onOpenAdmin();
-                  setIsMobileMenuOpen(false);
-                }}
-                className="flex items-center justify-between py-2 text-xs font-bold text-violet-400 hover:text-violet-300 transition-colors text-left border-b border-border/50"
-              >
-                <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-violet-400" />
-                  <span>Admin Workspace</span>
-                </div>
-                <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-mono">
-                  Manager
-                </span>
-              </button>
-            )}
           </div>
 
           {/* Mobile WhatsApp Button */}
