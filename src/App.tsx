@@ -190,6 +190,17 @@ export const App: React.FC = () => {
     };
   }, [products]);
 
+  // Dynamic SEO page title for deep-linking & products
+  useEffect(() => {
+    if (activeProduct) {
+      document.title = `${activeProduct.name} Subscription at Lowest Price | Subnest India`;
+    } else if (isAdminOpen) {
+      document.title = 'Subnest Workspace';
+    } else {
+      document.title = 'Subnest – Buy Premium OTT & Digital Subscriptions from ₹49/mo | Lowest Price India';
+    }
+  }, [activeProduct, isAdminOpen]);
+
   const handleSelectProduct = (product: Product) => {
     setActiveProduct(product);
     window.location.hash = `product-${product.id}`;
