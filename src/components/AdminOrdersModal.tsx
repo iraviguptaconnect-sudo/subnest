@@ -239,8 +239,10 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
             )}
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-secondary hover:bg-secondary/80 flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-secondary hover:bg-secondary/80 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+              title="Close Admin Panel"
             >
+              <span className="hidden xs:inline">Exit Admin</span>
               <X className="w-4 h-4" />
             </button>
           </div>

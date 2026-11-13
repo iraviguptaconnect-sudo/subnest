@@ -260,7 +260,7 @@ export const App: React.FC = () => {
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary selection:text-primary-foreground">
       
       {/* ───────── LUXURY SPLASH SCREEN (PRELOADER) ───────── */}
-      <SplashScreen />
+      {!isAdminOpen && <SplashScreen />}
 
       {/* ───────── CONDITIONAL VIEW RENDERING ───────── */}
       {activeProduct ? (
