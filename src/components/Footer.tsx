@@ -71,8 +71,8 @@ export const Footer: React.FC<FooterProps> = ({
             <h4 className="text-xs font-bold uppercase tracking-wider text-foreground mb-3">Verified Merchant</h4>
             <div className="bg-secondary/60 rounded-xl p-3 border border-border text-xs space-y-1">
               <p className="font-bold text-foreground">NAMAN JAIN</p>
-              <p className="font-mono text-[11px] text-muted-foreground">9347610989@pthdfc</p>
-              <p className="font-mono text-[11px] text-muted-foreground">9347610989@yespop</p>
+              <p className="font-mono text-[11px] text-muted-foreground">7032996297@pthdfc</p>
+              <p className="font-mono text-[11px] text-muted-foreground">7032996297@yespop</p>
             </div>
             <p className="text-[10px] text-muted-foreground mt-2">
               Zero gateway surcharge · 100% direct UPI
@@ -85,11 +85,11 @@ export const Footer: React.FC<FooterProps> = ({
             <ul className="space-y-2 text-xs text-muted-foreground">
               <li className="flex items-center gap-2">
                 <Phone className="w-3.5 h-3.5 text-primary" />
-                <span>+91 9347610989</span>
+                <span>+91 7032996297</span>
               </li>
               <li>
                 <a
-                  href="https://wa.me/919347610989?text=Hello%20Subnest%20Support"
+                  href="https://wa.me/917032996297?text=Hello%20Subnest%20Support"
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center gap-2 text-emerald-400 hover:underline font-medium"

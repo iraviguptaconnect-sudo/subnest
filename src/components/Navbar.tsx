@@ -131,7 +131,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           
           {/* Support / WhatsApp CTA */}
           <a
-            href="https://wa.me/919347610989?text=Hello%20Subnest,%20I%20want%20to%20order%20a%20subscription."
+            href="https://wa.me/917032996297?text=Hello%20Subnest,%20I%20want%20to%20order%20a%20subscription."
             target="_blank"
             rel="noreferrer"
             className="hidden sm:inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold bg-primary text-primary-foreground hover:opacity-90 shadow-md shadow-primary/25 transition-all hover:scale-105 active:scale-95"
@@ -235,13 +235,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Mobile WhatsApp Button */}
           <a
-            href="https://wa.me/919347610989?text=Hello%20Subnest,%20I%20want%20to%20order."
+            href="https://wa.me/917032996297?text=Hello%20Subnest,%20I%20want%20to%20order."
             target="_blank"
             rel="noreferrer"
             className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center gap-2 shadow-md"
           >
             <MessageCircle className="w-4 h-4" />
-            <span>Chat on WhatsApp (+91 9347610989)</span>
+            <span>Chat on WhatsApp (+91 7032996297)</span>
           </a>
         </div>
       </div>

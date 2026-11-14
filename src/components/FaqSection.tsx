@@ -11,7 +11,7 @@ export const FaqSection: React.FC = () => {
     },
     {
       q: 'What is the Subnest 100% Replacement Warranty?',
-      a: 'If any account gets logged out or encounters household verification before your plan period expires, our team resets or replaces your slot within 15–30 minutes via WhatsApp support (+91 9347610989). You are 100% protected throughout your validity.',
+      a: 'If any account gets logged out or encounters household verification before your plan period expires, our team resets or replaces your slot within 15–30 minutes via WhatsApp support (+91 7032996297). You are 100% protected throughout your validity.',
     },
     {
       q: 'How fast is the delivery after completing UPI payment?',

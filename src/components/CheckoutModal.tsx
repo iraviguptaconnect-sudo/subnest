@@ -69,17 +69,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const qrConfig = {
     paytm: {
       name: 'Paytm UPI',
-      id: '9347610989@pthdfc',
+      id: '7032996297@pthdfc',
       image: '/assets/paytm-qr.jpg',
     },
     phonepe: {
       name: 'PhonePe',
-      id: '9347610989@pthdfc',
+      id: '7032996297@pthdfc',
       image: '/assets/phonepe-qr.jpg',
     },
     pop: {
       name: 'POP Club',
-      id: '9347610989@yespop',
+      id: '7032996297@yespop',
       image: '/assets/pop-qr.jpg',
     },
   };
@@ -180,7 +180,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       `*Email:* ${email}%0A` +
       `*UPI UTR / Ref:* ${utrNumber}%0A%0A` +
       `_Payment done via UPI QR. Please verify & send credentials._`;
-    window.open(`https://wa.me/919347610989?text=${text}`, '_blank');
+    window.open(`https://wa.me/917032996297?text=${text}`, '_blank');
   };
 
   return (

@@ -321,7 +321,7 @@ export const ReviewsSection: React.FC = () => {
       <div className="relative z-10 flex items-center justify-between mb-4 px-2">
         <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
           <ShieldCheck className="w-4 h-4 text-emerald-500" />
-          <span>100% Verified Chats from WhatsApp (+91 9347610989)</span>
+          <span>100% Verified Chats from WhatsApp (+91 7032996297)</span>
         </span>
 
         <div className="flex items-center gap-2">

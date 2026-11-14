@@ -55,9 +55,9 @@ USING (true);
 -- 5. Optional Site Settings Table (for dynamic UPI ID / Announcement banner)
 CREATE TABLE IF NOT EXISTS public.site_settings (
     id TEXT PRIMARY KEY DEFAULT 'singleton',
-    upi_id TEXT DEFAULT '9347610989@pthdfc',
+    upi_id TEXT DEFAULT '7032996297@pthdfc',
     merchant_name TEXT DEFAULT 'NAMAN JAIN',
-    whatsapp_number TEXT DEFAULT '919347610989',
+    whatsapp_number TEXT DEFAULT '917032996297',
     announcement_active BOOLEAN DEFAULT true,
     announcement_text TEXT DEFAULT '⚡ Instant Delivery on WhatsApp within 5-10 Minutes!',
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now())
@@ -72,7 +72,7 @@ TO anon, authenticated
 USING (true);
 
 INSERT INTO public.site_settings (id, upi_id, merchant_name, whatsapp_number)
-VALUES ('singleton', '9347610989@pthdfc', 'NAMAN JAIN', '919347610989')
+VALUES ('singleton', '7032996297@pthdfc', 'NAMAN JAIN', '917032996297')
 ON CONFLICT (id) DO NOTHING;
 
 -- 6. Products Catalog Table (for Cloud CRUD)

@@ -33,7 +33,7 @@ export const OffersSection: React.FC = () => {
         {/* Join Community CTA */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <a
-            href="https://wa.me/919347610989?text=Hello%20Subnest,%20I%20want%20to%20join%20the%20VIP%20Deals%20Community."
+            href="https://wa.me/917032996297?text=Hello%20Subnest,%20I%20want%20to%20join%20the%20VIP%20Deals%20Community."
             target="_blank"
             rel="noreferrer"
             className="w-full sm:w-auto h-12 px-8 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-xl shadow-primary/30"

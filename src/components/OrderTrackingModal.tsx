@@ -134,7 +134,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ isOpen, 
             </div>
 
             <a
-              href={`https://wa.me/919347610989?text=Hello%20Subnest,%20checking%20status%20for%20Order%20${foundOrder.orderId}`}
+              href={`https://wa.me/917032996297?text=Hello%20Subnest,%20checking%20status%20for%20Order%20${foundOrder.orderId}`}
               target="_blank"
               rel="noreferrer"
               className="w-full mt-2 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
@@ -153,7 +153,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ isOpen, 
               If you paid from another device, message our WhatsApp support directly with your receipt:
             </p>
             <a
-              href="https://wa.me/919347610989?text=Hello%20Subnest,%20I%20want%20to%20track%20my%20order."
+              href="https://wa.me/917032996297?text=Hello%20Subnest,%20I%20want%20to%20track%20my%20order."
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 rounded-full bg-primary text-primary-foreground font-bold text-xs"
