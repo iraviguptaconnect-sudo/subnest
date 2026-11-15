@@ -77,7 +77,10 @@ export async function lookupOrderInSupabase(query: string): Promise<DbOrder[]> {
       return [];
     }
 
-    return (data as DbOrder[]) || [];
+    const filtered = ((data as DbOrder[]) || []).filter(
+      (o) => !o.order_id.startsWith('__SYS_')
+    );
+    return filtered;
   } catch (err) {
     console.warn('[Supabase] Exception in lookupOrder:', err);
     return [];
@@ -85,7 +88,7 @@ export async function lookupOrderInSupabase(query: string): Promise<DbOrder[]> {
 }
 
 /**
- * Fetch all recent orders for admin feed
+ * Fetch all recent orders for admin feed (excludes internal system config rows)
  */
 export async function fetchAllOrdersForAdmin(): Promise<DbOrder[]> {
   try {
@@ -93,16 +96,111 @@ export async function fetchAllOrdersForAdmin(): Promise<DbOrder[]> {
       .from('orders')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(50);
+      .limit(60);
 
     if (error) {
       console.warn('[Supabase] fetchAllOrders error:', error.message);
       return [];
     }
-    return (data as DbOrder[]) || [];
+    const filtered = ((data as DbOrder[]) || []).filter(
+      (o) => !o.order_id.startsWith('__SYS_')
+    );
+    return filtered;
   } catch (err) {
     console.warn('[Supabase] fetchAllOrders exception:', err);
     return [];
+  }
+}
+
+/**
+ * Cloud Sync for Admin Credentials (multi-device support)
+ */
+export async function fetchAdminCredentialsFromCloud(): Promise<{ id: string; password: string } | null> {
+  try {
+    // 1. Check site_settings table if available
+    try {
+      const { data: siteData } = await supabase
+        .from('site_settings')
+        .select('*')
+        .eq('id', 'singleton')
+        .maybeSingle();
+      if (siteData && siteData.admin_id && siteData.admin_password) {
+        return { id: siteData.admin_id, password: siteData.admin_password };
+      }
+    } catch {}
+
+    // 2. Fetch from cloud system config row in orders
+    const { data, error } = await supabase
+      .from('orders')
+      .select('credentials_note')
+      .eq('order_id', '__SYS_ADMIN_CONFIG__')
+      .maybeSingle();
+
+    if (error || !data || !data.credentials_note) return null;
+
+    try {
+      let raw = data.credentials_note;
+      if (raw.startsWith('b64:')) {
+        raw = atob(raw.slice(4));
+      }
+      const parsed = JSON.parse(raw);
+      if (parsed.id && parsed.password) {
+        return { id: String(parsed.id), password: String(parsed.password) };
+      }
+    } catch {}
+    return null;
+  } catch (err) {
+    console.warn('[Supabase] fetchAdminCredentialsFromCloud error:', err);
+    return null;
+  }
+}
+
+/**
+ * Save Admin Credentials to Cloud across all devices
+ */
+export async function saveAdminCredentialsToCloud(id: string, password: string): Promise<boolean> {
+  try {
+    const cleanId = id.trim();
+    const cleanPass = password;
+    const payload = JSON.stringify({ id: cleanId, password: cleanPass });
+    const encoded = 'b64:' + btoa(payload);
+
+    // Also attempt saving to site_settings if it exists
+    try {
+      await supabase.from('site_settings').upsert({
+        id: 'singleton',
+        admin_id: cleanId,
+        admin_password: cleanPass,
+        updated_at: new Date().toISOString(),
+      });
+    } catch {}
+
+    // Save to system config in orders (guaranteed to exist & accessible)
+    const { error } = await supabase.from('orders').upsert(
+      {
+        order_id: '__SYS_ADMIN_CONFIG__',
+        product_name: 'SYSTEM_AUTH_SYNC',
+        plan_duration: 'SYSTEM',
+        amount: 0,
+        customer_name: 'admin',
+        customer_phone: 'SYSTEM',
+        customer_email: 'system@subnest.internal',
+        utr_number: 'SYSTEM_CONFIG',
+        payment_method: 'system',
+        status: 'verified',
+        credentials_note: encoded,
+      },
+      { onConflict: 'order_id' }
+    );
+
+    if (error) {
+      console.warn('[Supabase] saveAdminCredentialsToCloud error:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Supabase] saveAdminCredentialsToCloud exception:', err);
+    return false;
   }
 }
 

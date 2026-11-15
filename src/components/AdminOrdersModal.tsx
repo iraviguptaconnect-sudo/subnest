@@ -24,7 +24,13 @@ import {
   LogOut,
   KeyRound,
 } from 'lucide-react';
-import { fetchAllOrdersForAdmin, updateOrderStatus, DbOrder } from '../lib/supabase';
+import {
+  fetchAllOrdersForAdmin,
+  updateOrderStatus,
+  DbOrder,
+  fetchAdminCredentialsFromCloud,
+  saveAdminCredentialsToCloud,
+} from '../lib/supabase';
 import { Product, PlanOption } from '../types';
 
 interface AdminOrdersModalProps {
@@ -81,65 +87,118 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
   const [showLoginPass, setShowLoginPass] = useState(false);
   const [authError, setAuthError] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   // Security Credentials form
   const [newAdminId, setNewAdminId] = useState('');
   const [newAdminPass, setNewAdminPass] = useState('');
   const [confirmAdminPass, setConfirmAdminPass] = useState('');
   const [credSaveMsg, setCredSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isSavingCreds, setIsSavingCreds] = useState(false);
 
-  // Handle Login with Brute-force Protection
-  const handleLogin = (e: React.FormEvent) => {
+  // Synchronize credentials with Supabase Cloud across all devices
+  useEffect(() => {
+    // 1. If this device has customized credentials in localStorage, sync them to cloud
+    const saved = localStorage.getItem('subnest_admin_creds');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.id && parsed.password) {
+          saveAdminCredentialsToCloud(parsed.id, parsed.password);
+        }
+      } catch {}
+    }
+
+    // 2. Fetch latest credentials from cloud and update local cache
+    fetchAdminCredentialsFromCloud().then((cloudCreds) => {
+      if (cloudCreds && cloudCreds.id && cloudCreds.password) {
+        localStorage.setItem('subnest_admin_creds', JSON.stringify(cloudCreds));
+      }
+    });
+  }, []);
+
+  // Handle Login with Cloud Sync & Brute-force Protection
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
+    setIsVerifying(true);
 
-    // Check lock
     try {
-      const lockData = JSON.parse(localStorage.getItem('subnest_auth_lock') || '{}');
-      if (lockData.lockedUntil && Date.now() < lockData.lockedUntil) {
-        const remainingMinutes = Math.ceil((lockData.lockedUntil - Date.now()) / 60000);
-        setAuthError(`Too many failed attempts. Login locked for ${remainingMinutes} more minute(s).`);
-        return;
-      }
-    } catch {}
-
-    const creds = getAdminCredentials();
-    const cleanId = loginId.trim().toLowerCase();
-    const cleanExpectedId = creds.id.trim().toLowerCase();
-
-    // Check ID (also accept 'admin', 'naman', 'subnest' for standard setups)
-    const isIdValid =
-      cleanId === cleanExpectedId ||
-      (cleanExpectedId === 'admin' && (cleanId === 'naman' || cleanId === 'subnest'));
-
-    if (isIdValid && loginPass === creds.password) {
-      setIsAuthenticated(true);
-      setAuthError('');
-      localStorage.removeItem('subnest_auth_lock');
-      const expiresAt = rememberMe
-        ? Date.now() + 14 * 24 * 60 * 60 * 1000 // 14 days
-        : Date.now() + 8 * 60 * 60 * 1000; // 8 hours
-      localStorage.setItem(
-        'subnest_admin_session',
-        JSON.stringify({ user: cleanId, loggedAt: Date.now(), expiresAt })
-      );
-    } else {
-      // Record failed attempt
-      let attempts = 1;
+      // Check lock
       try {
         const lockData = JSON.parse(localStorage.getItem('subnest_auth_lock') || '{}');
-        attempts = (lockData.attempts || 0) + 1;
-        if (attempts >= 5) {
-          const lockedUntil = Date.now() + 15 * 60 * 1000; // 15 mins lock
-          localStorage.setItem('subnest_auth_lock', JSON.stringify({ attempts, lockedUntil }));
-          setAuthError('Too many failed attempts. Login locked for 15 minutes.');
+        if (lockData.lockedUntil && Date.now() < lockData.lockedUntil) {
+          const remainingMinutes = Math.ceil((lockData.lockedUntil - Date.now()) / 60000);
+          setAuthError(`Too many failed attempts. Login locked for ${remainingMinutes} more minute(s).`);
+          setIsVerifying(false);
           return;
         }
-        localStorage.setItem('subnest_auth_lock', JSON.stringify({ attempts }));
       } catch {}
 
-      const remaining = 5 - attempts;
-      setAuthError(`Incorrect Admin ID or Password. (${remaining} attempt${remaining === 1 ? '' : 's'} remaining)`);
+      let creds = getAdminCredentials();
+      const cleanId = loginId.trim().toLowerCase();
+      let cleanExpectedId = creds.id.trim().toLowerCase();
+
+      // Check ID (also accept 'admin', 'naman', 'subnest' for standard setups)
+      let isIdValid =
+        cleanId === cleanExpectedId ||
+        (cleanExpectedId === 'admin' && (cleanId === 'naman' || cleanId === 'subnest'));
+
+      let isPassValid = loginPass === creds.password;
+
+      // If local credentials check fails, immediately verify with Supabase Cloud
+      // (in case the password was changed from another device!)
+      if (!isIdValid || !isPassValid) {
+        try {
+          const cloudCreds = await fetchAdminCredentialsFromCloud();
+          if (cloudCreds && cloudCreds.id && cloudCreds.password) {
+            creds = cloudCreds;
+            cleanExpectedId = cloudCreds.id.trim().toLowerCase();
+            isIdValid =
+              cleanId === cleanExpectedId ||
+              (cleanExpectedId === 'admin' && (cleanId === 'naman' || cleanId === 'subnest'));
+            isPassValid = loginPass === cloudCreds.password;
+
+            if (isIdValid && isPassValid) {
+              // Update local storage with the cloud credentials
+              localStorage.setItem('subnest_admin_creds', JSON.stringify(cloudCreds));
+            }
+          }
+        } catch {}
+      }
+
+      if (isIdValid && isPassValid) {
+        setIsAuthenticated(true);
+        setAuthError('');
+        localStorage.removeItem('subnest_auth_lock');
+        const expiresAt = rememberMe
+          ? Date.now() + 14 * 24 * 60 * 60 * 1000 // 14 days
+          : Date.now() + 8 * 60 * 60 * 1000; // 8 hours
+        localStorage.setItem(
+          'subnest_admin_session',
+          JSON.stringify({ user: cleanId, loggedAt: Date.now(), expiresAt })
+        );
+      } else {
+        // Record failed attempt
+        let attempts = 1;
+        try {
+          const lockData = JSON.parse(localStorage.getItem('subnest_auth_lock') || '{}');
+          attempts = (lockData.attempts || 0) + 1;
+          if (attempts >= 5) {
+            const lockedUntil = Date.now() + 15 * 60 * 1000; // 15 mins lock
+            localStorage.setItem('subnest_auth_lock', JSON.stringify({ attempts, lockedUntil }));
+            setAuthError('Too many failed attempts. Login locked for 15 minutes.');
+            setIsVerifying(false);
+            return;
+          }
+          localStorage.setItem('subnest_auth_lock', JSON.stringify({ attempts }));
+        } catch {}
+
+        const remaining = 5 - attempts;
+        setAuthError(`Incorrect Admin ID or Password. (${remaining} attempt${remaining === 1 ? '' : 's'} remaining)`);
+      }
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -151,8 +210,8 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
     setAuthError('');
   };
 
-  // Handle Saving New Credentials
-  const handleSaveCredentials = (e: React.FormEvent) => {
+  // Handle Saving New Credentials (synced to cloud for all devices)
+  const handleSaveCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
     setCredSaveMsg(null);
 
@@ -169,24 +228,47 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
       return;
     }
 
-    localStorage.setItem(
-      'subnest_admin_creds',
-      JSON.stringify({ id: newAdminId.trim(), password: newAdminPass })
-    );
-    setCredSaveMsg({ type: 'success', text: 'Admin ID & Password updated successfully!' });
-    setNewAdminPass('');
-    setConfirmAdminPass('');
+    setIsSavingCreds(true);
+    try {
+      const cleanId = newAdminId.trim();
+      // 1. Save locally
+      localStorage.setItem(
+        'subnest_admin_creds',
+        JSON.stringify({ id: cleanId, password: newAdminPass })
+      );
+
+      // 2. Sync to Supabase cloud for all other devices
+      const cloudSuccess = await saveAdminCredentialsToCloud(cleanId, newAdminPass);
+
+      setCredSaveMsg({
+        type: 'success',
+        text: cloudSuccess
+          ? 'Admin ID & Password updated and synced across all devices!'
+          : 'Admin ID & Password updated locally!',
+      });
+      setNewAdminPass('');
+      setConfirmAdminPass('');
+    } finally {
+      setIsSavingCreds(false);
+    }
   };
 
   // Reset Credentials to default
-  const handleResetCredentials = () => {
+  const handleResetCredentials = async () => {
     if (window.confirm('Reset credentials to default: (admin / subnest@2026)?')) {
       localStorage.removeItem('subnest_admin_creds');
-      setCredSaveMsg({ type: 'success', text: 'Credentials reset to default (admin / subnest@2026)' });
+      await saveAdminCredentialsToCloud('admin', 'subnest@2026');
+      setCredSaveMsg({ type: 'success', text: 'Credentials reset to default (admin / subnest@2026) across all devices.' });
       setNewAdminId('');
       setNewAdminPass('');
       setConfirmAdminPass('');
     }
+  };
+
+  // Emergency Unlock Lockout
+  const handleEmergencyUnlock = () => {
+    localStorage.removeItem('subnest_auth_lock');
+    setAuthError('');
   };
 
   // Active admin section: 'orders' | 'products' | 'security'
@@ -395,11 +477,24 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
             Restricted area. Enter your ID & Password to manage orders and catalog.
           </p>
 
-          {/* Error Alert */}
+          {/* Error Alert with Emergency Unlock */}
           {authError && (
-            <div className="w-full mt-4 p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>{authError}</span>
+            <div className="w-full mt-4 p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs space-y-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{authError}</span>
+              </div>
+              {authError.includes('locked') && (
+                <div className="pt-1 border-t border-destructive/20 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleEmergencyUnlock}
+                    className="text-[11px] underline font-semibold text-destructive hover:opacity-80 cursor-pointer"
+                  >
+                    Unlock now & retry
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -461,10 +556,20 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
 
             <button
               type="submit"
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              disabled={isVerifying}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 disabled:opacity-60 text-white font-bold text-xs sm:text-sm shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
-              <KeyRound className="w-4 h-4" />
-              <span>Login to Admin Workspace</span>
+              {isVerifying ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Verifying Credentials...</span>
+                </>
+              ) : (
+                <>
+                  <KeyRound className="w-4 h-4" />
+                  <span>Login to Admin Workspace</span>
+                </>
+              )}
             </button>
           </form>
 
@@ -1239,9 +1344,11 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
 
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-md hover:bg-primary/90 cursor-pointer"
+                    disabled={isSavingCreds}
+                    className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-md hover:bg-primary/90 disabled:opacity-60 cursor-pointer flex items-center gap-1.5"
                   >
-                    Save Credentials
+                    {isSavingCreds && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                    <span>{isSavingCreds ? 'Syncing to Cloud...' : 'Save & Sync to Cloud'}</span>
                   </button>
                 </div>
               </form>

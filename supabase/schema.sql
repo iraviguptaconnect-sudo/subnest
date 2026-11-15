@@ -52,9 +52,11 @@ FOR UPDATE
 TO anon, authenticated
 USING (true);
 
--- 5. Optional Site Settings Table (for dynamic UPI ID / Announcement banner)
+-- 5. Optional Site Settings Table (for dynamic UPI ID, Announcement banner & Cloud Admin Sync)
 CREATE TABLE IF NOT EXISTS public.site_settings (
     id TEXT PRIMARY KEY DEFAULT 'singleton',
+    admin_id TEXT DEFAULT 'admin',
+    admin_password TEXT DEFAULT 'subnest@2026',
     upi_id TEXT DEFAULT '7032996297@pthdfc',
     merchant_name TEXT DEFAULT 'NAMAN JAIN',
     whatsapp_number TEXT DEFAULT '917032996297',
@@ -71,8 +73,16 @@ FOR SELECT
 TO anon, authenticated
 USING (true);
 
-INSERT INTO public.site_settings (id, upi_id, merchant_name, whatsapp_number)
-VALUES ('singleton', '7032996297@pthdfc', 'NAMAN JAIN', '917032996297')
+CREATE POLICY "Allow public upsert site_settings"
+ON public.site_settings
+FOR ALL
+TO anon, authenticated
+USING (true)
+WITH CHECK (true);
+
+INSERT INTO public.site_settings (id, admin_id, admin_password, upi_id, merchant_name, whatsapp_number)
+VALUES ('singleton', 'admin', 'subnest@2026', '7032996297@pthdfc', 'NAMAN JAIN', '917032996297')
+ON CONFLICT (id) DO NOTHING;
 ON CONFLICT (id) DO NOTHING;
 
 -- 6. Products Catalog Table (for Cloud CRUD)
