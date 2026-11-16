@@ -6,7 +6,7 @@
   
   <!-- Homepage -->
   <url>
-    <loc>https://subnest-vert.vercel.app/</loc>
+    <loc>https://www.subnests.in/</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
@@ -14,7 +14,7 @@
 
   <!-- Popular OTT Plans Section -->
   <url>
-    <loc>https://subnest-vert.vercel.app/#subscriptions</loc>
+    <loc>https://www.subnests.in/#subscriptions</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
@@ -22,7 +22,7 @@
 
   <!-- OTT Combo Builder -->
   <url>
-    <loc>https://subnest-vert.vercel.app/#combo-builder</loc>
+    <loc>https://www.subnests.in/#combo-builder</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
@@ -30,7 +30,7 @@
 
   <!-- Verified Customer Reviews -->
   <url>
-    <loc>https://subnest-vert.vercel.app/#reviews</loc>
+    <loc>https://www.subnests.in/#reviews</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -38,79 +38,79 @@
 
   <!-- Products Deep Links -->
   <url>
-    <loc>https://subnest-vert.vercel.app/#product-netflix</loc>
+    <loc>https://www.subnests.in/#product-netflix</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://subnest-vert.vercel.app/#product-prime-ad-free</loc>
+    <loc>https://www.subnests.in/#product-prime-ad-free</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://subnest-vert.vercel.app/#product-hotstar-super</loc>
+    <loc>https://www.subnests.in/#product-hotstar-super</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://subnest-vert.vercel.app/#product-youtube-premium</loc>
+    <loc>https://www.subnests.in/#product-youtube-premium</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://subnest-vert.vercel.app/#product-sonyliv</loc>
+    <loc>https://www.subnests.in/#product-sonyliv</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://subnest-vert.vercel.app/#product-crunchyroll</loc>
+    <loc>https://www.subnests.in/#product-crunchyroll</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://subnest-vert.vercel.app/#product-zee5</loc>
+    <loc>https://www.subnests.in/#product-zee5</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://subnest-vert.vercel.app/#product-aha-video</loc>
+    <loc>https://www.subnests.in/#product-aha-video</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://subnest-vert.vercel.app/#product-sunnxt</loc>
+    <loc>https://www.subnests.in/#product-sunnxt</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://subnest-vert.vercel.app/#product-hoichoi</loc>
+    <loc>https://www.subnests.in/#product-hoichoi</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://subnest-vert.vercel.app/#product-fancode</loc>
+    <loc>https://www.subnests.in/#product-fancode</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://subnest-vert.vercel.app/#product-apple-tv</loc>
+    <loc>https://www.subnests.in/#product-apple-tv</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://subnest-vert.vercel.app/#product-telegram-premium</loc>
+    <loc>https://www.subnests.in/#product-telegram-premium</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
