@@ -56,7 +56,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [isSuccess, setIsSuccess] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes session
 
-  // ───────── MODEL 1: REFERRAL & WALLET STATE ─────────
+  // ───────── MODEL 1: REFERRAL & WALLET & UNIVERSAL COUPON STATE ─────────
   const [referralInput, setReferralInput] = useState('');
   const [appliedReferral, setAppliedReferral] = useState<string | null>(null);
   const [referralMsg, setReferralMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -64,17 +64,52 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [useWallet, setUseWallet] = useState(true);
   const [copiedReferralLink, setCopiedReferralLink] = useState(false);
 
-  // Auto-apply referral code from sessionStorage or URL query param if present
+  // Helper to check if code is 10% universal discount code (SUBNEST10, SUBNEST 10, SUBNEST)
+  const isTenPercentCode = (code: string | null) => {
+    if (!code) return false;
+    const norm = code.toUpperCase().replace(/[\s\-_]+/g, '');
+    return norm === 'SUBNEST10' || norm === 'SUBNEST' || norm === 'WELCOME10';
+  };
+
+  // Pricing calculations
+  const basePrice = comboData ? comboData.price : plan?.price || 99;
+
+  // Calculate discount based on code type
+  const calculateCodeDiscount = (code: string | null, base: number) => {
+    if (!code) return 0;
+    if (isTenPercentCode(code)) {
+      // 10% OFF, minimum ₹10, capped at base - 29
+      const tenPercent = Math.round(base * 0.10);
+      return Math.min(Math.max(10, tenPercent), Math.max(0, base - 29));
+    }
+    // Standard referral code (₹20 OFF)
+    return Math.min(20, Math.max(0, base - 29));
+  };
+
+  const referralDiscount = calculateCodeDiscount(appliedReferral, basePrice);
+  const remainingAfterRef = basePrice - referralDiscount;
+  const walletDiscount = (useWallet && userWallet && userWallet.availableBalance > 0)
+    ? Math.min(userWallet.availableBalance, Math.max(0, remainingAfterRef - 29))
+    : 0;
+  const amountToPay = Math.max(29, basePrice - referralDiscount - walletDiscount);
+  const totalSavings = (basePrice - amountToPay);
+
+  // Auto-apply referral or promo code from sessionStorage or URL query param if present
   useEffect(() => {
     try {
       const storedRef = sessionStorage.getItem('subnest_referral_code');
       if (storedRef && !appliedReferral) {
         setAppliedReferral(storedRef);
         setReferralInput(storedRef);
-        setReferralMsg({ type: 'success', text: `Referral code "${storedRef}" applied: Flat ₹20 OFF!` });
+        const discount = calculateCodeDiscount(storedRef, basePrice);
+        if (isTenPercentCode(storedRef)) {
+          setReferralMsg({ type: 'success', text: `Coupon "${storedRef.toUpperCase()}" applied: 10% OFF (-₹${discount})!` });
+        } else {
+          setReferralMsg({ type: 'success', text: `Referral code "${storedRef}" applied: Flat ₹20 OFF!` });
+        }
       }
     } catch {}
-  }, []);
+  }, [basePrice]);
 
   // Fetch wallet balance when customer enters a valid phone number
   useEffect(() => {
@@ -86,23 +121,25 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
   }, [phone]);
 
-  // Pricing calculations
-  const basePrice = comboData ? comboData.price : plan?.price || 99;
-  const referralDiscount = appliedReferral ? Math.min(20, Math.max(0, basePrice - 29)) : 0;
-  const remainingAfterRef = basePrice - referralDiscount;
-  const walletDiscount = (useWallet && userWallet && userWallet.availableBalance > 0)
-    ? Math.min(userWallet.availableBalance, Math.max(0, remainingAfterRef - 29))
-    : 0;
-  const amountToPay = Math.max(29, basePrice - referralDiscount - walletDiscount);
-  const totalSavings = (basePrice - amountToPay);
-
-  // Apply referral code handler
+  // Apply referral / promo code handler
   const handleApplyReferral = (e: React.FormEvent) => {
     e.preventDefault();
     setReferralMsg(null);
     const cleanCode = referralInput.trim();
     if (!cleanCode) {
-      setReferralMsg({ type: 'error', text: 'Please enter a referral code or friend phone.' });
+      setReferralMsg({ type: 'error', text: 'Please enter a promo code or referral phone.' });
+      return;
+    }
+
+    // Universal 10% Coupon (SUBNEST10)
+    if (isTenPercentCode(cleanCode)) {
+      const codeUpper = cleanCode.toUpperCase();
+      setAppliedReferral(codeUpper);
+      const discount = calculateCodeDiscount(codeUpper, basePrice);
+      setReferralMsg({ type: 'success', text: `Coupon "${codeUpper}" applied: 10% OFF (-₹${discount})!` });
+      try {
+        sessionStorage.setItem('subnest_referral_code', codeUpper);
+      } catch {}
       return;
     }
 
@@ -427,10 +464,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <div className="flex items-center gap-2">
                     <Check className="w-4 h-4 shrink-0 text-emerald-400" />
                     <span>
-                      Code <strong>{appliedReferral}</strong> applied: <strong>Flat ₹20 OFF</strong>!
+                      Code <strong>{appliedReferral}</strong> applied:{' '}
+                      <strong>{isTenPercentCode(appliedReferral) ? '10% OFF' : 'Flat ₹20 OFF'}</strong>!
                     </span>
                   </div>
-                  <span className="font-bold font-mono">-₹20</span>
+                  <span className="font-bold font-mono">-₹{referralDiscount}</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -438,7 +476,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     <Tag className="w-3.5 h-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
-                      placeholder="e.g. FRIEND20 or 9876543210"
+                      placeholder="e.g. SUBNEST10 or friend phone"
                       value={referralInput}
                       onChange={(e) => setReferralInput(e.target.value)}
                       className="storefront-field w-full pl-9 pr-3 py-2 text-xs bg-card border border-input text-foreground rounded-xl uppercase font-mono"

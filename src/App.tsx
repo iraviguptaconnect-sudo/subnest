@@ -14,6 +14,7 @@ import { CheckoutModal } from './components/CheckoutModal';
 import { OrderTrackingModal } from './components/OrderTrackingModal';
 import { AdminOrdersModal } from './components/AdminOrdersModal';
 import { ReferEarnModal } from './components/ReferEarnModal';
+import { PromoPopupModal } from './components/PromoPopupModal';
 import { WhatsAppFloat } from './components/WhatsAppFloat';
 import { SplashScreen } from './components/SplashScreen';
 import { PRODUCTS } from './data/products';
@@ -402,6 +403,9 @@ export const App: React.FC = () => {
         onClose={() => setIsReferralOpen(false)}
         onShopNow={handleScrollToPlans}
       />
+
+      {/* Universal 10% Welcome Promo Popup Modal (SUBNEST10) */}
+      <PromoPopupModal onShopNow={handleScrollToPlans} />
 
       {/* Checkout Modal with Naman Jain's UPI QR codes */}
       <CheckoutModal
