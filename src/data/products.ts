@@ -183,6 +183,37 @@ export const PRODUCTS: Product[] = [
     ]
   },
   {
+    id: 'linkedin-premium',
+    name: 'LinkedIn Premium & Sales Navigator',
+    category: 'Special',
+    tagline: 'Business, Career, Learning & Sales Nav',
+    description: 'Official LinkedIn upgrade for New & Old users. Unlimited InMails, Who Viewed Your Profile, 16,000+ LinkedIn Learning certificates, and Sales Navigator lead filters.',
+    image: '/subsplit-assets/linkedin.svg',
+    popular: true,
+    deliveryType: 'Direct Link / Invite',
+    devices: 'LinkedIn Web, iOS & Android',
+    features: [
+      'Direct InMail credits to message any recruiter or client',
+      'See who viewed your profile in the last 365 days',
+      '16,000+ LinkedIn Learning courses with certificate badge',
+      'Sales Navigator Core & Advanced filters for prospecting',
+      'Plans available for both New Accounts & Existing/Old Accounts',
+      '100% Replacement Warranty & WhatsApp Support'
+    ],
+    plans: [
+      { id: 'li-new-biz-2m', duration: 'Business Premium – 2M (New User)', price: 500, originalPrice: 3999, badge: 'New User' },
+      { id: 'li-new-car-2m', duration: 'Career Premium – 2M (New User)', price: 500, originalPrice: 3499, badge: 'New User' },
+      { id: 'li-new-car-3m', duration: 'Career Premium – 3M (135+ days old)', price: 600, originalPrice: 4999, badge: '135d+ Acc' },
+      { id: 'li-new-sn-2m', duration: 'Sales Navigator Core – 2M (New User)', price: 1500, originalPrice: 9999, badge: 'Sales Nav' },
+      { id: 'li-new-sn-3m', duration: 'Sales Navigator Core – 3M (New User)', price: 2800, originalPrice: 14999, badge: 'Sales Nav' },
+      { id: 'li-old-learn-2m', duration: 'LinkedIn Learning – 2M (Old User)', price: 800, originalPrice: 2499, badge: 'Learning' },
+      { id: 'li-old-biz-duo-2m', duration: 'Business Premium Duo – 2M (Old User)', price: 1499, originalPrice: 4999, badge: 'Duo' },
+      { id: 'li-old-car-duo-2m', duration: 'Career Premium Duo – 2M (Old User)', price: 1299, originalPrice: 3999, badge: 'Duo' },
+      { id: 'li-old-car-12m', duration: 'Career Premium Direct Link – 12M', price: 9500, originalPrice: 24999, badge: '12 Months' },
+      { id: 'li-old-sn-adv-1m', duration: 'Sales Navigator Adv – 1M (Old User)', price: 2100, originalPrice: 8999, badge: 'Advanced' }
+    ]
+  },
+  {
     id: 'sonyliv',
     name: 'SonyLIV Premium 4K',
     category: 'OTT',
