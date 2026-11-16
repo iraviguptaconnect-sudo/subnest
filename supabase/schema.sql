@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
     id TEXT PRIMARY KEY DEFAULT 'singleton',
     admin_id TEXT DEFAULT 'admin',
     admin_password TEXT DEFAULT 'subnest@2026',
-    upi_id TEXT DEFAULT '7032996297@pthdfc',
+    upi_id TEXT DEFAULT '9347610989@pthdfc',
     merchant_name TEXT DEFAULT 'NAMAN JAIN',
     whatsapp_number TEXT DEFAULT '917032996297',
     announcement_active BOOLEAN DEFAULT true,
@@ -81,8 +81,7 @@ USING (true)
 WITH CHECK (true);
 
 INSERT INTO public.site_settings (id, admin_id, admin_password, upi_id, merchant_name, whatsapp_number)
-VALUES ('singleton', 'admin', 'subnest@2026', '7032996297@pthdfc', 'NAMAN JAIN', '917032996297')
-ON CONFLICT (id) DO NOTHING;
+VALUES ('singleton', 'admin', 'subnest@2026', '9347610989@pthdfc', 'NAMAN JAIN', '917032996297')
 ON CONFLICT (id) DO NOTHING;
 
 -- 6. Products Catalog Table (for Cloud CRUD)

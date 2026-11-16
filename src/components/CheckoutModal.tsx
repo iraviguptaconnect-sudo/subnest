@@ -201,17 +201,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const qrConfig = {
     paytm: {
       name: 'Paytm UPI',
-      id: '7032996297@pthdfc',
+      id: '9347610989@pthdfc',
       image: '/assets/paytm-qr.jpg',
     },
     phonepe: {
       name: 'PhonePe',
-      id: '7032996297@pthdfc',
+      id: '9347610989@pthdfc',
       image: '/assets/phonepe-qr.jpg',
     },
     pop: {
       name: 'POP Club',
-      id: '7032996297@yespop',
+      id: '9347610989@yespop',
       image: '/assets/pop-qr.jpg',
     },
   };
