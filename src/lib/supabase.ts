@@ -78,7 +78,7 @@ export async function lookupOrderInSupabase(query: string): Promise<DbOrder[]> {
     }
 
     const filtered = ((data as DbOrder[]) || []).filter(
-      (o) => !o.order_id.startsWith('__SYS_')
+      (o) => !o.order_id.startsWith('__SYS_') && !o.order_id.startsWith('__WALLET_')
     );
     return filtered;
   } catch (err) {
@@ -88,7 +88,7 @@ export async function lookupOrderInSupabase(query: string): Promise<DbOrder[]> {
 }
 
 /**
- * Fetch all recent orders for admin feed (excludes internal system config rows)
+ * Fetch all recent orders for admin feed (excludes internal system config rows and wallet rows)
  */
 export async function fetchAllOrdersForAdmin(): Promise<DbOrder[]> {
   try {
@@ -103,11 +103,213 @@ export async function fetchAllOrdersForAdmin(): Promise<DbOrder[]> {
       return [];
     }
     const filtered = ((data as DbOrder[]) || []).filter(
-      (o) => !o.order_id.startsWith('__SYS_')
+      (o) => !o.order_id.startsWith('__SYS_') && !o.order_id.startsWith('__WALLET_')
     );
     return filtered;
   } catch (err) {
     console.warn('[Supabase] fetchAllOrders exception:', err);
+    return [];
+  }
+}
+
+export interface WalletReferralRecord {
+  friendPhone: string;
+  orderId: string;
+  bonus: number;
+  date: string;
+}
+
+export interface WalletData {
+  phone: string;
+  availableBalance: number;
+  totalEarned: number;
+  usedCredits: number;
+  referrals: WalletReferralRecord[];
+}
+
+/**
+ * Fetch a customer's Subnest Referral Wallet
+ */
+export async function fetchUserWallet(phone: string): Promise<WalletData> {
+  const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+  const fallback: WalletData = {
+    phone: cleanPhone,
+    availableBalance: 0,
+    totalEarned: 0,
+    usedCredits: 0,
+    referrals: [],
+  };
+
+  if (!cleanPhone || cleanPhone.length < 10) return fallback;
+
+  try {
+    const key = '__WALLET_' + cleanPhone;
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('order_id', key)
+      .maybeSingle();
+
+    if (error || !data || !data.credentials_note) return fallback;
+
+    try {
+      const parsed = JSON.parse(data.credentials_note);
+      return {
+        phone: cleanPhone,
+        availableBalance: typeof parsed.availableBalance === 'number' ? parsed.availableBalance : (data.amount || 0),
+        totalEarned: parsed.totalEarned || 0,
+        usedCredits: parsed.usedCredits || 0,
+        referrals: Array.isArray(parsed.referrals) ? parsed.referrals : [],
+      };
+    } catch {
+      return fallback;
+    }
+  } catch (err) {
+    console.warn('[Supabase] fetchUserWallet exception:', err);
+    return fallback;
+  }
+}
+
+/**
+ * Credit Referral Bonus (e.g. ₹20) to the Referrer's Wallet
+ */
+export async function creditReferralBonus(
+  referrerPhoneOrCode: string,
+  friendPhone: string,
+  orderId: string,
+  bonus: number = 20
+): Promise<boolean> {
+  const cleanPhone = referrerPhoneOrCode.replace(/\D/g, '').slice(-10);
+  if (!cleanPhone || cleanPhone.length < 10) return false;
+
+  try {
+    const key = '__WALLET_' + cleanPhone;
+    const current = await fetchUserWallet(cleanPhone);
+
+    // Prevent duplicate credit for the same order
+    if (current.referrals.some((r) => r.orderId === orderId)) {
+      return true;
+    }
+
+    const nextReferrals = [
+      ...current.referrals,
+      {
+        friendPhone: friendPhone.replace(/\D/g, '').slice(-10) || 'Verified Member',
+        orderId,
+        bonus,
+        date: new Date().toISOString(),
+      },
+    ];
+
+    const updatedData = {
+      phone: cleanPhone,
+      availableBalance: current.availableBalance + bonus,
+      totalEarned: current.totalEarned + bonus,
+      usedCredits: current.usedCredits,
+      referrals: nextReferrals,
+    };
+
+    const { error } = await supabase.from('orders').upsert(
+      {
+        order_id: key,
+        product_name: 'SUBNEST_WALLET',
+        plan_duration: 'WALLET',
+        amount: updatedData.availableBalance,
+        customer_name: `Subnest Member (${cleanPhone})`,
+        customer_phone: cleanPhone,
+        customer_email: `${cleanPhone}@subnest.internal`,
+        utr_number: 'WALLET_REWARD',
+        payment_method: 'wallet',
+        status: 'verified',
+        credentials_note: JSON.stringify(updatedData),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'order_id' }
+    );
+
+    if (error) {
+      console.warn('[Supabase] creditReferralBonus error:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Supabase] creditReferralBonus exception:', err);
+    return false;
+  }
+}
+
+/**
+ * Deduct Wallet Balance when a user redeems credits during checkout
+ */
+export async function deductWalletCredits(phone: string, amountToDeduct: number): Promise<boolean> {
+  const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+  if (!cleanPhone || cleanPhone.length < 10 || amountToDeduct <= 0) return false;
+
+  try {
+    const key = '__WALLET_' + cleanPhone;
+    const current = await fetchUserWallet(cleanPhone);
+    const newBal = Math.max(0, current.availableBalance - amountToDeduct);
+
+    const updatedData = {
+      ...current,
+      availableBalance: newBal,
+      usedCredits: current.usedCredits + amountToDeduct,
+    };
+
+    const { error } = await supabase.from('orders').upsert(
+      {
+        order_id: key,
+        product_name: 'SUBNEST_WALLET',
+        plan_duration: 'WALLET',
+        amount: newBal,
+        customer_name: `Subnest Member (${cleanPhone})`,
+        customer_phone: cleanPhone,
+        customer_email: `${cleanPhone}@subnest.internal`,
+        utr_number: 'WALLET_REWARD',
+        payment_method: 'wallet',
+        status: 'verified',
+        credentials_note: JSON.stringify(updatedData),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'order_id' }
+    );
+
+    return !error;
+  } catch (err) {
+    console.warn('[Supabase] deductWalletCredits exception:', err);
+    return false;
+  }
+}
+
+/**
+ * Fetch all wallet balances for Admin dashboard
+ */
+export async function fetchAllWalletsForAdmin(): Promise<WalletData[]> {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .ilike('order_id', '__WALLET_%')
+      .order('updated_at', { ascending: false });
+
+    if (error || !data) return [];
+
+    const wallets: WalletData[] = [];
+    for (const row of data) {
+      try {
+        const parsed = JSON.parse(row.credentials_note || '{}');
+        wallets.push({
+          phone: row.customer_phone,
+          availableBalance: typeof parsed.availableBalance === 'number' ? parsed.availableBalance : (row.amount || 0),
+          totalEarned: parsed.totalEarned || 0,
+          usedCredits: parsed.usedCredits || 0,
+          referrals: Array.isArray(parsed.referrals) ? parsed.referrals : [],
+        });
+      } catch {}
+    }
+    return wallets;
+  } catch (err) {
+    console.warn('[Supabase] fetchAllWalletsForAdmin exception:', err);
     return [];
   }
 }

@@ -1,8 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { Product, PlanOption } from '../types';
-import { X, Check, Copy, ShieldCheck, Zap, MessageCircle, AlertCircle, ArrowLeft, Download, Timer } from 'lucide-react';
+import {
+  X,
+  Check,
+  Copy,
+  ShieldCheck,
+  Zap,
+  MessageCircle,
+  AlertCircle,
+  ArrowLeft,
+  Download,
+  Timer,
+  Gift,
+  Tag,
+  Wallet,
+  Sparkles,
+  Share2,
+} from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { createOrderInSupabase } from '../lib/supabase';
+import {
+  createOrderInSupabase,
+  fetchUserWallet,
+  deductWalletCredits,
+  WalletData,
+} from '../lib/supabase';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -35,6 +56,81 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [isSuccess, setIsSuccess] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes session
 
+  // ───────── MODEL 1: REFERRAL & WALLET STATE ─────────
+  const [referralInput, setReferralInput] = useState('');
+  const [appliedReferral, setAppliedReferral] = useState<string | null>(null);
+  const [referralMsg, setReferralMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [userWallet, setUserWallet] = useState<WalletData | null>(null);
+  const [useWallet, setUseWallet] = useState(true);
+  const [copiedReferralLink, setCopiedReferralLink] = useState(false);
+
+  // Auto-apply referral code from sessionStorage or URL query param if present
+  useEffect(() => {
+    try {
+      const storedRef = sessionStorage.getItem('subnest_referral_code');
+      if (storedRef && !appliedReferral) {
+        setAppliedReferral(storedRef);
+        setReferralInput(storedRef);
+        setReferralMsg({ type: 'success', text: `Referral code "${storedRef}" applied: Flat ₹20 OFF!` });
+      }
+    } catch {}
+  }, []);
+
+  // Fetch wallet balance when customer enters a valid phone number
+  useEffect(() => {
+    const clean = phone.replace(/\D/g, '').slice(-10);
+    if (clean.length === 10) {
+      fetchUserWallet(clean).then((w) => setUserWallet(w));
+    } else {
+      setUserWallet(null);
+    }
+  }, [phone]);
+
+  // Pricing calculations
+  const basePrice = comboData ? comboData.price : plan?.price || 99;
+  const referralDiscount = appliedReferral ? Math.min(20, Math.max(0, basePrice - 29)) : 0;
+  const remainingAfterRef = basePrice - referralDiscount;
+  const walletDiscount = (useWallet && userWallet && userWallet.availableBalance > 0)
+    ? Math.min(userWallet.availableBalance, Math.max(0, remainingAfterRef - 29))
+    : 0;
+  const amountToPay = Math.max(29, basePrice - referralDiscount - walletDiscount);
+  const totalSavings = (basePrice - amountToPay);
+
+  // Apply referral code handler
+  const handleApplyReferral = (e: React.FormEvent) => {
+    e.preventDefault();
+    setReferralMsg(null);
+    const cleanCode = referralInput.trim();
+    if (!cleanCode) {
+      setReferralMsg({ type: 'error', text: 'Please enter a referral code or friend phone.' });
+      return;
+    }
+
+    const cleanUserPhone = phone.replace(/\D/g, '').slice(-10);
+    const cleanInputPhone = cleanCode.replace(/\D/g, '').slice(-10);
+
+    // Self-referral prevention
+    if (cleanUserPhone && cleanInputPhone && cleanUserPhone === cleanInputPhone) {
+      setReferralMsg({ type: 'error', text: 'You cannot use your own referral code!' });
+      return;
+    }
+
+    setAppliedReferral(cleanCode);
+    try {
+      sessionStorage.setItem('subnest_referral_code', cleanCode);
+    } catch {}
+    setReferralMsg({ type: 'success', text: `Referral code "${cleanCode}" applied: Flat ₹20 OFF!` });
+  };
+
+  const handleRemoveReferral = () => {
+    setAppliedReferral(null);
+    setReferralInput('');
+    setReferralMsg(null);
+    try {
+      sessionStorage.removeItem('subnest_referral_code');
+    } catch {}
+  };
+
   // Countdown timer in step 2
   useEffect(() => {
     if (step !== 2 || isSuccess) return;
@@ -63,7 +159,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
   }, []);
 
-  const amountToPay = comboData ? comboData.price : plan?.price || 99;
   const itemName = comboData ? comboData.title : `${product?.name} (${plan?.duration})`;
 
   const qrConfig = {
@@ -126,6 +221,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       return;
     }
 
+    // Order metadata with referral and wallet details
+    const orderMetadata = {
+      referral_code: appliedReferral || null,
+      referral_discount: referralDiscount,
+      wallet_credits_used: walletDiscount,
+      original_price: basePrice,
+      reward_credited: false,
+    };
+
     const newOrder = {
       orderId,
       itemName,
@@ -136,13 +240,20 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       utrNumber,
       status: 'Verification Pending',
       date: new Date().toLocaleString(),
+      referralCode: appliedReferral,
+      savings: totalSavings,
     };
 
-    // 1. Local storage backup
+    // 1. Deduct wallet credits if used
+    if (walletDiscount > 0) {
+      deductWalletCredits(phone, walletDiscount).catch(() => {});
+    }
+
+    // 2. Local storage backup
     const existing = JSON.parse(localStorage.getItem('subnest_orders') || '[]');
     localStorage.setItem('subnest_orders', JSON.stringify([newOrder, ...existing]));
 
-    // 2. Real-time Supabase Cloud DB write
+    // 3. Real-time Supabase Cloud DB write
     createOrderInSupabase({
       order_id: orderId,
       product_name: itemName,
@@ -154,6 +265,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       utr_number: utrNumber,
       payment_method: activeQr,
       status: 'pending_verification',
+      credentials_note: JSON.stringify(orderMetadata),
     }).then((res) => {
       if (res.success) {
         console.log('[Subnest] Order synced to Supabase successfully:', orderId);
@@ -170,11 +282,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   };
 
   const handleWhatsAppRedirect = () => {
+    let savingsText = '';
+    if (referralDiscount > 0) savingsText += `%0A*Referral Discount:* -Rs.${referralDiscount} (${appliedReferral})`;
+    if (walletDiscount > 0) savingsText += `%0A*Wallet Credits Used:* -Rs.${walletDiscount}`;
+
     const text =
       `*NEW SUBNEST ORDER CONFIRMATION*%0A%0A` +
       `*Order ID:* ${orderId}%0A` +
       `*Product:* ${itemName}%0A` +
-      `*Amount:* Rs.${amountToPay}%0A` +
+      `*Original Price:* Rs.${basePrice}` +
+      savingsText +
+      `%0A*Amount Paid:* Rs.${amountToPay}%0A` +
       `*Customer Name:* ${fullName}%0A` +
       `*Phone:* ${phone}%0A` +
       `*Email:* ${email}%0A` +
@@ -286,14 +404,125 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               />
             </div>
 
-            {/* Order summary box */}
-            <div className="bg-secondary/40 border border-border rounded-2xl p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Order Item</p>
-                <p className="text-sm font-bold text-foreground">{itemName}</p>
+            {/* ───────── REFERRAL CODE INPUT / BADGE ───────── */}
+            <div className="p-3.5 rounded-2xl bg-secondary/30 border border-border space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-foreground flex items-center gap-1.5">
+                  <Gift className="w-3.5 h-3.5 text-primary" />
+                  <span>Referral or Promo Code</span>
+                </span>
+                {appliedReferral && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveReferral}
+                    className="text-[11px] text-destructive hover:underline cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">Total</p>
+
+              {appliedReferral ? (
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+                    <span>
+                      Code <strong>{appliedReferral}</strong> applied: <strong>Flat ₹20 OFF</strong>!
+                    </span>
+                  </div>
+                  <span className="font-bold font-mono">-₹20</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Tag className="w-3.5 h-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="e.g. FRIEND20 or 9876543210"
+                      value={referralInput}
+                      onChange={(e) => setReferralInput(e.target.value)}
+                      className="storefront-field w-full pl-9 pr-3 py-2 text-xs bg-card border border-input text-foreground rounded-xl uppercase font-mono"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleApplyReferral}
+                    className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs hover:opacity-90 transition-opacity cursor-pointer shrink-0 shadow-sm"
+                  >
+                    Apply
+                  </button>
+                </div>
+              )}
+
+              {referralMsg && !appliedReferral && (
+                <p className={`text-[11px] ${referralMsg.type === 'success' ? 'text-emerald-400' : 'text-destructive'}`}>
+                  {referralMsg.text}
+                </p>
+              )}
+            </div>
+
+            {/* ───────── SUBNEST WALLET REDEEM (IF CREDITS AVAILABLE) ───────── */}
+            {userWallet && userWallet.availableBalance > 0 && (
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-violet-500/10 to-indigo-500/10 border border-violet-500/20 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-foreground flex items-center gap-1.5">
+                    <Wallet className="w-3.5 h-3.5 text-primary" />
+                    <span>Subnest Wallet Cash</span>
+                  </span>
+                  <span className="font-bold text-emerald-400 font-mono">
+                    ₹{userWallet.availableBalance} Available
+                  </span>
+                </div>
+                <label className="flex items-center gap-2.5 text-xs text-foreground cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={useWallet}
+                    onChange={(e) => setUseWallet(e.target.checked)}
+                    className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
+                  />
+                  <span>
+                    Redeem wallet credits for this order (<strong className="text-emerald-400">-₹{walletDiscount}</strong>)
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {/* Order summary box */}
+            <div className="bg-secondary/40 border border-border rounded-2xl p-4 space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{itemName}</span>
+                <span className="font-semibold text-foreground">₹{basePrice}</span>
+              </div>
+
+              {referralDiscount > 0 && (
+                <div className="flex items-center justify-between text-xs text-emerald-400">
+                  <span className="flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    <span>Referral Discount</span>
+                  </span>
+                  <span className="font-bold">-₹{referralDiscount}</span>
+                </div>
+              )}
+
+              {walletDiscount > 0 && (
+                <div className="flex items-center justify-between text-xs text-emerald-400">
+                  <span className="flex items-center gap-1">
+                    <Wallet className="w-3 h-3" />
+                    <span>Wallet Credits Redeemed</span>
+                  </span>
+                  <span className="font-bold">-₹{walletDiscount}</span>
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-border flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">Total to Pay</p>
+                  {totalSavings > 0 && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
+                      You save ₹{totalSavings}!
+                    </span>
+                  )}
+                </div>
                 <p className="text-2xl font-bold text-primary">₹{amountToPay}</p>
               </div>
             </div>
@@ -442,12 +671,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <p className="text-xs text-muted-foreground mt-1">
                 Order ID: <span className="font-mono text-primary font-bold">{orderId}</span>
               </p>
+              {totalSavings > 0 && (
+                <p className="text-xs text-emerald-400 font-bold mt-1">
+                  🎉 Total Savings Applied: ₹{totalSavings}!
+                </p>
+              )}
               <p className="text-xs text-muted-foreground max-w-sm mx-auto mt-2">
                 Your payment UTR has been logged. Click below to notify us on WhatsApp for instant 5-minute activation.
               </p>
             </div>
 
-            <div className="space-y-2 pt-2 max-w-xs mx-auto">
+            <div className="space-y-2 pt-2 max-w-sm mx-auto">
               <button
                 type="button"
                 onClick={handleWhatsAppRedirect}
@@ -456,6 +690,48 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <MessageCircle className="w-4 h-4" />
                 <span>Confirm on WhatsApp (5 Mins)</span>
               </button>
+
+              {/* Viral Refer & Earn Post-Purchase Widget */}
+              {phone.replace(/\D/g, '').length >= 10 && (
+                <div className="p-3.5 rounded-2xl bg-secondary/50 border border-border text-left space-y-2.5 mt-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+                    <Gift className="w-4 h-4 text-primary" />
+                    <span>Want ₹20 Cash on your next subscription?</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Dost ko aapka link share karo: unhe Flat ₹20 OFF milega, aur unke order par aapko ₹20 Wallet Cash!
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cleanP = phone.replace(/\D/g, '').slice(-10);
+                        const link = `${window.location.origin}?ref=${cleanP}`;
+                        const msg = `*Hey! Check this out for cheap OTT subscriptions* ⚡%0ANetflix 4K, Amazon Prime, Hotstar & YouTube starting at *Rs.49/mo* on Subnest!%0A%0A🎁 *Use my referral link for FLAT Rs.20 OFF:*%0A${link}%0A%0A100% replacement warranty & instant WhatsApp delivery!`;
+                        window.open(`https://wa.me/?text=${msg}`, '_blank');
+                      }}
+                      className="flex-1 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span>Share on WhatsApp</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cleanP = phone.replace(/\D/g, '').slice(-10);
+                        const link = `${window.location.origin}?ref=${cleanP}`;
+                        navigator.clipboard.writeText(link);
+                        setCopiedReferralLink(true);
+                        setTimeout(() => setCopiedReferralLink(false), 2000);
+                      }}
+                      className="px-3 py-2 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground font-semibold text-[11px] flex items-center gap-1 cursor-pointer shrink-0"
+                    >
+                      {copiedReferralLink ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedReferralLink ? 'Copied' : 'Copy'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <button
                 type="button"

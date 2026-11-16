@@ -13,6 +13,7 @@ import { ProductDetailPage } from './components/ProductDetailPage';
 import { CheckoutModal } from './components/CheckoutModal';
 import { OrderTrackingModal } from './components/OrderTrackingModal';
 import { AdminOrdersModal } from './components/AdminOrdersModal';
+import { ReferEarnModal } from './components/ReferEarnModal';
 import { WhatsAppFloat } from './components/WhatsAppFloat';
 import { SplashScreen } from './components/SplashScreen';
 import { PRODUCTS } from './data/products';
@@ -22,6 +23,8 @@ import { fetchProductsFromSupabase, upsertProductInSupabase, deleteProductFromSu
 export const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
+  const [isReferralOpen, setIsReferralOpen] = useState(false);
+  const [referralBanner, setReferralBanner] = useState<string | null>(null);
   const [isAdminOpen, setIsAdminOpen] = useState(() => {
     if (typeof window !== 'undefined') {
       const path = (window.location.pathname || '').toLowerCase().replace(/\/+$/, '') || '/';
@@ -190,6 +193,19 @@ export const App: React.FC = () => {
     };
   }, [products]);
 
+  // Capture Referral code from query parameter (?ref=...)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get('ref');
+      if (ref) {
+        const clean = ref.trim();
+        sessionStorage.setItem('subnest_referral_code', clean);
+        setReferralBanner(clean);
+      }
+    } catch {}
+  }, []);
+
   // Dynamic SEO page title for deep-linking & products
   useEffect(() => {
     if (activeProduct) {
@@ -295,7 +311,27 @@ export const App: React.FC = () => {
             onOpenTracking={() => setIsTrackingOpen(true)}
             onOpenReviews={handleScrollToReviews}
             onOpenAdmin={() => setIsAdminOpen(true)}
+            onOpenReferral={() => setIsReferralOpen(true)}
           />
+
+          {/* Floating Top Referral Toast (if user arrived via a friend's referral link) */}
+          {referralBanner && (
+            <div className="fixed top-20 sm:top-24 left-1/2 -translate-x-1/2 z-40 max-w-md w-[92%] px-4 py-2.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 backdrop-blur-xl shadow-xl flex items-center justify-between gap-2 text-xs text-emerald-400 animate-in fade-in slide-in-from-top-4 duration-300">
+              <div className="flex items-center gap-2 truncate">
+                <span className="text-base">🎁</span>
+                <span className="truncate">
+                  Referral Active: <strong>Flat ₹20 OFF</strong> applied at checkout!
+                </span>
+              </div>
+              <button
+                onClick={() => setReferralBanner(null)}
+                className="text-emerald-400/80 hover:text-emerald-400 p-1 cursor-pointer shrink-0"
+                title="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
           <main className="flex-1">
             {/* Hero Section */}
@@ -343,12 +379,20 @@ export const App: React.FC = () => {
             onOpenCombo={handleScrollToCombo}
             onOpenTracking={() => setIsTrackingOpen(true)}
             onOpenAdmin={() => setIsAdminOpen(true)}
+            onOpenReferral={() => setIsReferralOpen(true)}
           />
         </>
       )}
 
       {/* Floating Sticky WhatsApp Button */}
       <WhatsAppFloat />
+
+      {/* Refer & Earn (Dual ₹20 Bonus) Modal */}
+      <ReferEarnModal
+        isOpen={isReferralOpen}
+        onClose={() => setIsReferralOpen(false)}
+        onShopNow={handleScrollToPlans}
+      />
 
       {/* Checkout Modal with Naman Jain's UPI QR codes */}
       <CheckoutModal

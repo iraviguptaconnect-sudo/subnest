@@ -6,6 +6,7 @@ interface FooterProps {
   onOpenCombo: () => void;
   onViewPlans: () => void;
   onOpenAdmin?: () => void;
+  onOpenReferral?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
@@ -13,6 +14,7 @@ export const Footer: React.FC<FooterProps> = ({
   onOpenCombo,
   onViewPlans,
   onOpenAdmin,
+  onOpenReferral,
 }) => {
   return (
     <footer className="border-t border-border bg-card/60 pt-12 pb-8">
@@ -58,6 +60,13 @@ export const Footer: React.FC<FooterProps> = ({
                   Track Your Order
                 </button>
               </li>
+              {onOpenReferral && (
+                <li>
+                  <button onClick={onOpenReferral} className="text-primary hover:text-primary/80 font-semibold transition-colors flex items-center gap-1 cursor-pointer">
+                    <span>🎁 Refer & Earn ₹20</span>
+                  </button>
+                </li>
+              )}
               <li>
                 <a href="#reviews" className="hover:text-foreground transition-colors">
                   Customer Stories & Reviews

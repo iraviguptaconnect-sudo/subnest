@@ -23,6 +23,8 @@ import {
   EyeOff,
   LogOut,
   KeyRound,
+  Gift,
+  Wallet,
 } from 'lucide-react';
 import {
   fetchAllOrdersForAdmin,
@@ -30,6 +32,10 @@ import {
   DbOrder,
   fetchAdminCredentialsFromCloud,
   saveAdminCredentialsToCloud,
+  creditReferralBonus,
+  fetchAllWalletsForAdmin,
+  WalletData,
+  supabase,
 } from '../lib/supabase';
 import { Product, PlanOption } from '../types';
 
@@ -271,14 +277,18 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
     setAuthError('');
   };
 
-  // Active admin section: 'orders' | 'products' | 'security'
-  const [activeSection, setActiveSection] = useState<'orders' | 'products' | 'security'>('orders');
+  // Active admin section: 'orders' | 'products' | 'referrals' | 'security'
+  const [activeSection, setActiveSection] = useState<'orders' | 'products' | 'referrals' | 'security'>('orders');
 
   // Orders state
   const [orders, setOrders] = useState<DbOrder[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [orderSearch, setOrderSearch] = useState('');
   const [orderTab, setOrderTab] = useState<'all' | 'pending' | 'delivered'>('all');
+
+  // Wallets & Referrals state
+  const [wallets, setWallets] = useState<WalletData[]>([]);
+  const [loadingWallets, setLoadingWallets] = useState(false);
 
   // Products state
   const [productSearch, setProductSearch] = useState('');
@@ -318,6 +328,7 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
           ? 'verified'
           : 'pending_verification',
         created_at: l.date || new Date().toISOString(),
+        credentials_note: l.referralCode ? JSON.stringify({ referral_code: l.referralCode, referral_discount: 20 }) : '',
       }));
 
       const merged = [...(cloudOrders || [])];
@@ -335,9 +346,22 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
     }
   };
 
+  const loadWallets = async () => {
+    setLoadingWallets(true);
+    try {
+      const res = await fetchAllWalletsForAdmin();
+      setWallets(res);
+    } catch (err) {
+      console.warn('Error loading wallets:', err);
+    } finally {
+      setLoadingWallets(false);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       loadOrders();
+      loadWallets();
     }
   }, [isAuthenticated]);
 
@@ -346,6 +370,28 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
       prev.map((o) => (o.order_id === orderId ? { ...o, status: newStatus } : o))
     );
     await updateOrderStatus(orderId, newStatus);
+
+    // If verified or credentials sent: automatically credit ₹20 to Referrer's wallet
+    if (newStatus === 'verified' || newStatus === 'credentials_sent') {
+      const order = orders.find((o) => o.order_id === orderId);
+      if (order && order.credentials_note) {
+        try {
+          const meta = JSON.parse(order.credentials_note);
+          if (meta.referral_code && !meta.reward_credited) {
+            const ok = await creditReferralBonus(meta.referral_code, order.customer_phone, orderId, 20);
+            if (ok) {
+              meta.reward_credited = true;
+              const updatedNote = JSON.stringify(meta);
+              await supabase.from('orders').update({ credentials_note: updatedNote }).eq('order_id', orderId);
+              setOrders((prev) =>
+                prev.map((o) => (o.order_id === orderId ? { ...o, credentials_note: updatedNote } : o))
+              );
+              loadWallets();
+            }
+          }
+        } catch {}
+      }
+    }
   };
 
   const openCustomerWhatsApp = (phone: string, order: DbOrder) => {
@@ -674,6 +720,21 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
             </button>
 
             <button
+              onClick={() => {
+                setActiveSection('referrals');
+                loadWallets();
+              }}
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                activeSection === 'referrals'
+                  ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25'
+                  : 'bg-secondary/60 text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Gift className="w-3.5 h-3.5" />
+              <span>Referrals & Wallets ({wallets.length})</span>
+            </button>
+
+            <button
               onClick={() => setActiveSection('security')}
               className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
                 activeSection === 'security'
@@ -757,30 +818,48 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
                   </p>
                 </div>
               ) : (
-                filteredOrders.map((order) => (
-                  <div
-                    key={order.order_id}
-                    className="p-4 rounded-2xl bg-secondary/30 border border-border hover:border-primary/40 transition-colors space-y-3"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-2.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-primary">{order.order_id}</span>
-                        <span className="text-xs font-semibold text-foreground">{order.product_name}</span>
+                filteredOrders.map((order) => {
+                  let refMeta: any = null;
+                  try {
+                    if (order.credentials_note) {
+                      const p = JSON.parse(order.credentials_note);
+                      if (p.referral_code) refMeta = p;
+                    }
+                  } catch {}
+
+                  return (
+                    <div
+                      key={order.order_id}
+                      className="p-4 rounded-2xl bg-secondary/30 border border-border hover:border-primary/40 transition-colors space-y-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-2.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-primary">{order.order_id}</span>
+                          <span className="text-xs font-semibold text-foreground">{order.product_name}</span>
+                          {refMeta && (
+                            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">
+                              <Gift className="w-3 h-3" />
+                              <span>Ref: {refMeta.referral_code} (-₹{refMeta.referral_discount || 20})</span>
+                              {refMeta.reward_credited && (
+                                <span className="text-emerald-400 font-bold ml-1">✓ Rewarded</span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono font-bold text-emerald-400">₹{order.amount}</span>
+                          <select
+                            value={order.status}
+                            onChange={(e) => handleStatusChange(order.order_id, e.target.value as any)}
+                            className="text-[11px] font-semibold rounded-lg bg-card border border-border px-2 py-1 text-foreground focus:outline-none focus:border-primary cursor-pointer"
+                          >
+                            <option value="pending_verification">⏳ Pending</option>
+                            <option value="verified">✓ Verified</option>
+                            <option value="credentials_sent">📦 Delivered</option>
+                            <option value="cancelled">✕ Cancelled</option>
+                          </select>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold text-emerald-400">₹{order.amount}</span>
-                        <select
-                          value={order.status}
-                          onChange={(e) => handleStatusChange(order.order_id, e.target.value as any)}
-                          className="text-[11px] font-semibold rounded-lg bg-card border border-border px-2 py-1 text-foreground focus:outline-none focus:border-primary cursor-pointer"
-                        >
-                          <option value="pending_verification">⏳ Pending</option>
-                          <option value="verified">✓ Verified</option>
-                          <option value="credentials_sent">📦 Delivered</option>
-                          <option value="cancelled">✕ Cancelled</option>
-                        </select>
-                      </div>
-                    </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-muted-foreground">
                       <div>
@@ -814,8 +893,9 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
                       </button>
                     </div>
                   </div>
-                ))
-              )}
+                );
+              })
+            )}
             </div>
           </div>
         )}
@@ -1263,7 +1343,134 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
           </div>
         )}
 
-        {/* ───────── TAB 3: SECURITY & PASSWORD SETTINGS ───────── */}
+        {/* ───────── TAB 3: REFERRALS & WALLETS (MODEL 1) ───────── */}
+        {activeSection === 'referrals' && (
+          <div className="flex-1 flex flex-col min-h-0 pt-3 space-y-3">
+            {/* Header & Stats Banner */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="p-3 rounded-2xl bg-secondary/50 border border-border">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Active Wallets</span>
+                <p className="text-lg font-black text-foreground">{wallets.length}</p>
+              </div>
+              <div className="p-3 rounded-2xl bg-secondary/50 border border-border">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Total Bonus Earned</span>
+                <p className="text-lg font-black text-primary">
+                  ₹{wallets.reduce((acc, w) => acc + (w.totalEarned || 0), 0)}
+                </p>
+              </div>
+              <div className="p-3 rounded-2xl bg-secondary/50 border border-border">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Outstanding Credits</span>
+                <p className="text-lg font-black text-emerald-400">
+                  ₹{wallets.reduce((acc, w) => acc + (w.availableBalance || 0), 0)}
+                </p>
+              </div>
+              <div className="p-3 rounded-2xl bg-secondary/50 border border-border">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Verified Referrals</span>
+                <p className="text-lg font-black text-violet-400">
+                  {wallets.reduce((acc, w) => acc + (w.referrals?.length || 0), 0)}
+                </p>
+              </div>
+            </div>
+
+            {/* Wallets List */}
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              <div className="flex items-center justify-between pb-1">
+                <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Gift className="w-4 h-4 text-primary" />
+                  <span>Subnest Member Wallets (Dual ₹20 Model)</span>
+                </h4>
+                <button
+                  onClick={loadWallets}
+                  className="text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingWallets ? 'animate-spin' : ''}`} />
+                  <span>Refresh Wallets</span>
+                </button>
+              </div>
+
+              {loadingWallets && wallets.length === 0 ? (
+                <div className="h-64 flex items-center justify-center text-xs text-muted-foreground">
+                  <RefreshCw className="w-4 h-4 animate-spin text-primary mr-2" />
+                  Loading member wallets from Supabase...
+                </div>
+              ) : wallets.length === 0 ? (
+                <div className="h-64 flex flex-col items-center justify-center text-center p-4 rounded-2xl bg-secondary/20 border border-border">
+                  <Gift className="w-8 h-8 text-muted-foreground/40 mb-2" />
+                  <p className="text-sm font-semibold text-foreground">No referral wallets yet</p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                    Jab koi customer apna WhatsApp number daalkar referral link share karega aur unka dost order karega, wo yahan show hoga.
+                  </p>
+                </div>
+              ) : (
+                wallets.map((w) => (
+                  <div
+                    key={w.phone}
+                    className="p-4 rounded-2xl bg-secondary/30 border border-border space-y-3 hover:border-primary/40 transition-colors"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                          <Wallet className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="font-mono text-xs font-bold text-foreground">
+                            +91 {w.phone}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground ml-2">
+                            ({w.referrals?.length || 0} friends referred)
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-xs">
+                        <div>
+                          <span className="text-[10px] text-muted-foreground mr-1">Available:</span>
+                          <span className="font-mono font-black text-emerald-400">₹{w.availableBalance}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-muted-foreground mr-1">Earned:</span>
+                          <span className="font-mono font-bold text-primary">₹{w.totalEarned}</span>
+                        </div>
+                        <a
+                          href={`https://wa.me/91${w.phone}?text=Hello%20Subnest%20VIP,%20you%20have%20Rs.${w.availableBalance}%20in%20your%20Subnest%20Wallet!`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2.5 py-1 rounded-lg bg-emerald-600/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-semibold flex items-center gap-1 hover:bg-emerald-600/20 cursor-pointer"
+                        >
+                          <MessageCircle className="w-3 h-3" />
+                          <span>Chat</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    {w.referrals && w.referrals.length > 0 && (
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                          Referred Orders:
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {w.referrals.map((r, i) => (
+                            <div
+                              key={i}
+                              className="p-2 rounded-xl bg-background/60 border border-border text-[11px] flex items-center justify-between"
+                            >
+                              <span className="font-mono text-muted-foreground">
+                                {r.orderId} ({r.friendPhone})
+                              </span>
+                              <span className="font-bold text-emerald-400">+₹{r.bonus} Credited</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ───────── TAB 4: SECURITY & PASSWORD SETTINGS ───────── */}
         {activeSection === 'security' && (
           <div className="flex-1 overflow-y-auto pt-4 max-w-lg mx-auto w-full space-y-5 pr-1">
             <div className="p-5 rounded-2xl bg-secondary/40 border border-border space-y-4">

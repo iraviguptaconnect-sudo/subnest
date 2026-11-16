@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Package, MessageCircle, Moon, Sun, Menu, X, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Sparkles, Package, MessageCircle, Moon, Sun, Menu, X, ArrowRight, ShieldCheck, Gift } from 'lucide-react';
 
 interface NavbarProps {
   onOpenTracking: () => void;
@@ -7,6 +7,7 @@ interface NavbarProps {
   onViewPlans: () => void;
   onOpenReviews?: () => void;
   onOpenAdmin?: () => void;
+  onOpenReferral?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -15,6 +16,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onViewPlans,
   onOpenReviews,
   onOpenAdmin,
+  onOpenReferral,
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -70,6 +72,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const navLinks = [
     { label: 'Plans', action: onViewPlans },
     { label: 'Combos', action: onOpenCombo, highlight: true },
+    ...(onOpenReferral ? [{ label: 'Refer & Earn', action: onOpenReferral, isRefer: true }] : []),
     { label: 'Reviews', action: onOpenReviews },
     { label: 'Track Order', action: onOpenTracking },
   ];
@@ -109,19 +112,27 @@ export const Navbar: React.FC<NavbarProps> = ({
         </a>
 
         {/* Center: Desktop Navigation Links */}
-        <div className="hidden md:flex items-center gap-7">
-          {navLinks.map((link) => (
+        <div className="hidden md:flex items-center gap-6">
+          {navLinks.map((link: any) => (
             <button
               key={link.label}
               onClick={link.action}
-              className={`relative px-1 py-1 text-xs sm:text-sm font-semibold transition-colors duration-200 ${
-                link.highlight
+              className={`relative px-1 py-1 text-xs sm:text-sm font-semibold transition-colors duration-200 cursor-pointer ${
+                link.isRefer
+                  ? 'text-violet-400 hover:text-violet-300 flex items-center gap-1.5'
+                  : link.highlight
                   ? 'text-primary hover:text-primary/80 flex items-center gap-1'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
+              {link.isRefer && <Gift className="w-3.5 h-3.5 text-primary" />}
               {link.highlight && <Sparkles className="w-3.5 h-3.5" />}
               <span>{link.label}</span>
+              {link.isRefer && (
+                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-primary/20 text-primary font-bold border border-primary/30">
+                  ₹20
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -204,6 +215,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
               <ArrowRight className="w-3.5 h-3.5 text-primary" />
             </button>
+
+            {onOpenReferral && (
+              <button
+                onClick={() => {
+                  onOpenReferral();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="flex items-center justify-between py-2 text-xs font-bold text-violet-400 hover:text-violet-300 transition-colors text-left border-b border-border/50"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Gift className="w-3.5 h-3.5 text-primary" />
+                  <span>Refer & Earn (Dual ₹20 Bonus)</span>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-primary" />
+              </button>
+            )}
 
             {onOpenReviews && (
               <button
