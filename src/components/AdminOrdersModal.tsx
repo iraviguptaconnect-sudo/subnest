@@ -419,7 +419,7 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
   });
 
   // Filtered products
-  const categories = ['All', 'OTT', 'Regional', 'Music', 'Entertainment', 'Special'];
+  const categories = ['All', 'OTT', 'AI & Tools', 'Music', 'Regional', 'Entertainment', 'Special'];
   const filteredProducts = products.filter((p) => {
     const matchesCat = productCategory === 'All' || p.category === productCategory;
     const matchesSearch =

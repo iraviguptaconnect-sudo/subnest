@@ -18,7 +18,7 @@ export const ProductList: React.FC<ProductListProps> = ({
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>('All');
 
-  const categories = ['All', 'OTT', 'Regional', 'Music', 'Entertainment', 'Special'];
+  const categories = ['All', 'OTT', 'AI & Tools', 'Music', 'Regional', 'Entertainment', 'Special'];
 
   const filteredProducts = products.filter((p) => {
     const matchesCat = activeCategory === 'All' || p.category === activeCategory;

@@ -47,7 +47,16 @@ export const App: React.FC = () => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Merge missing default products (e.g. newly added ChatGPT Plus)
+          const missing = PRODUCTS.filter((dp) => !parsed.some((p: any) => p.id === dp.id));
+          if (missing.length > 0) {
+            const merged = [...parsed, ...missing];
+            localStorage.setItem('subnest_products_catalog', JSON.stringify(merged));
+            return merged;
+          }
+          return parsed;
+        }
       } catch {}
     }
     return PRODUCTS;

@@ -161,6 +161,28 @@ export const PRODUCTS: Product[] = [
     ]
   },
   {
+    id: 'chatgpt-plus',
+    name: 'ChatGPT Plus (GPT-4o)',
+    category: 'AI & Tools',
+    tagline: 'Private Account & On Your Own Email',
+    description: 'Get official OpenAI ChatGPT Plus with GPT-4o, Canvas, DALL-E 3 image generation, and Advanced Voice mode at lowest reseller rates.',
+    image: '/subsplit-assets/chatgpt-D-eCKgGu.png',
+    popular: true,
+    deliveryType: 'Instant Account / Own Email',
+    devices: 'Web, iOS, Android & Desktop',
+    features: [
+      'Full Access to GPT-4o, GPT-4 & Canvas',
+      'DALL·E 3 High-Resolution Image Creation',
+      'Advanced Voice Mode & File Upload Analysis',
+      'Choose Private Account (₹699) or On Your Email (₹1,499)',
+      '100% Replacement Warranty & WhatsApp Support'
+    ],
+    plans: [
+      { id: 'cgpt-private', duration: 'ChatGPT Private Account', price: 699, originalPrice: 1999, badge: 'Popular' },
+      { id: 'cgpt-own-email', duration: 'ChatGPT On Your Own Email', price: 1499, originalPrice: 2499, badge: 'Own Email' }
+    ]
+  },
+  {
     id: 'sonyliv',
     name: 'SonyLIV Premium 4K',
     category: 'OTT',
