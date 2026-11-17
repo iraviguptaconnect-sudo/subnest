@@ -6,20 +6,62 @@ import {
   Check,
   Share2,
   Wallet,
-  Users,
-  Coins,
   ArrowRight,
   ShieldCheck,
   Sparkles,
   RefreshCw,
   ExternalLink,
+  Edit2,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { fetchUserWallet, WalletData } from '../lib/supabase';
 
 interface ReferEarnModalProps {
   isOpen: boolean;
   onClose: () => void;
   onShopNow?: () => void;
+}
+
+// Robust fallback clipboard copy helper for mobile/webviews
+async function copyToClipboard(text: string): Promise<boolean> {
+  if (!text) return false;
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {}
+  try {
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.setAttribute('readonly', '');
+    el.style.position = 'fixed';
+    el.style.left = '-9999px';
+    document.body.appendChild(el);
+    el.select();
+    const successful = document.execCommand('copy');
+    document.body.removeChild(el);
+    return successful;
+  } catch {
+    return false;
+  }
+}
+
+// Normalize phone input: strip +91, leading 0, spaces, dashes
+function normalizePhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length > 10) {
+    if (digits.startsWith('91') && digits.length === 12) {
+      return digits.slice(2);
+    }
+    if (digits.startsWith('0') && digits.length === 11) {
+      return digits.slice(1);
+    }
+    return digits.slice(-10);
+  }
+  return digits;
 }
 
 export const ReferEarnModal: React.FC<ReferEarnModalProps> = ({
@@ -29,71 +71,137 @@ export const ReferEarnModal: React.FC<ReferEarnModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const [phone, setPhone] = useState('');
+  const [phoneInput, setPhoneInput] = useState('');
+  const [activePhone, setActivePhone] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [inputError, setInputError] = useState<string | null>(null);
+
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [loadingWallet, setLoadingWallet] = useState(false);
 
-  // Auto-fill phone from saved profile if available
+  // Initialize phone from saved storage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('subnest_user_profile') || localStorage.getItem('nexora_user_profile');
-      if (saved) {
-        const parsed = JSON.parse(saved);
+      const savedReferralOwner = localStorage.getItem('subnest_referral_owner_phone');
+      if (savedReferralOwner && normalizePhone(savedReferralOwner).length === 10) {
+        const clean = normalizePhone(savedReferralOwner);
+        setActivePhone(clean);
+        setPhoneInput(clean);
+        setIsEditing(false);
+        return;
+      }
+
+      const savedProfile =
+        localStorage.getItem('subnest_user_profile') || localStorage.getItem('nexora_user_profile');
+      if (savedProfile) {
+        const parsed = JSON.parse(savedProfile);
         if (parsed.phone) {
-          const clean = parsed.phone.replace(/\D/g, '').slice(-10);
+          const clean = normalizePhone(parsed.phone);
           if (clean.length === 10) {
-            setPhone(clean);
+            setActivePhone(clean);
+            setPhoneInput(clean);
+            setIsEditing(false);
+            return;
           }
         }
       }
-    } catch {}
+
+      // If no valid phone found, show input state
+      setIsEditing(true);
+    } catch {
+      setIsEditing(true);
+    }
   }, []);
 
-  // Fetch wallet data whenever a valid 10-digit phone is present
+  // Fetch wallet stats when activePhone is set
   useEffect(() => {
-    const clean = phone.replace(/\D/g, '').slice(-10);
-    if (clean.length === 10) {
+    if (activePhone.length === 10) {
       setLoadingWallet(true);
-      fetchUserWallet(clean)
+      fetchUserWallet(activePhone)
         .then((data) => setWallet(data))
         .finally(() => setLoadingWallet(false));
     } else {
       setWallet(null);
     }
-  }, [phone]);
+  }, [activePhone]);
 
-  const cleanPhone = phone.replace(/\D/g, '').slice(-10);
-  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://subnest-rgg9.vercel.app';
-  const referralLink = cleanPhone.length === 10 ? `${siteUrl}?ref=${cleanPhone}` : `${siteUrl}?ref=YOURPHONE`;
-  const referralCode = cleanPhone.length === 10 ? cleanPhone : 'YOURPHONE';
+  // Determine site base URL (prefer production domain if localhost or preview)
+  const siteUrl =
+    typeof window !== 'undefined' &&
+    window.location.origin &&
+    !window.location.origin.includes('localhost')
+      ? window.location.origin
+      : 'https://www.subnests.in';
 
-  const handleCopyLink = () => {
-    if (cleanPhone.length !== 10) {
-      alert('Please enter your 10-digit WhatsApp number first.');
+  // Referral link with explicit trailing slash before ?ref=
+  const referralLink = activePhone ? `${siteUrl}/?ref=${activePhone}` : '';
+  const referralCode = activePhone;
+
+  // Handle generating / saving the referral link
+  const handleGenerate = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setInputError(null);
+
+    const clean = normalizePhone(phoneInput);
+    if (!clean || clean.length !== 10) {
+      setInputError('Please enter a valid 10-digit mobile number.');
       return;
     }
-    navigator.clipboard.writeText(referralLink);
+
+    setActivePhone(clean);
+    setIsEditing(false);
+
+    try {
+      localStorage.setItem('subnest_referral_owner_phone', clean);
+      const existing = localStorage.getItem('subnest_user_profile');
+      if (existing) {
+        const parsed = JSON.parse(existing);
+        localStorage.setItem(
+          'subnest_user_profile',
+          JSON.stringify({ ...parsed, phone: clean })
+        );
+      } else {
+        localStorage.setItem('subnest_user_profile', JSON.stringify({ phone: clean }));
+      }
+    } catch {}
+
+    // Auto copy generated link to clipboard & fire celebration
+    const genLink = `${siteUrl}/?ref=${clean}`;
+    copyToClipboard(genLink);
     setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+    setTimeout(() => setCopiedLink(false), 2500);
+
+    try {
+      confetti({
+        particleCount: 45,
+        spread: 60,
+        origin: { y: 0.6 },
+      });
+    } catch {}
   };
 
-  const handleCopyCode = () => {
-    if (cleanPhone.length !== 10) {
-      alert('Please enter your 10-digit WhatsApp number first.');
-      return;
+  const handleCopyLink = async () => {
+    if (!referralLink) return;
+    const ok = await copyToClipboard(referralLink);
+    if (ok) {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
     }
-    navigator.clipboard.writeText(referralCode);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const handleCopyCode = async () => {
+    if (!referralCode) return;
+    const ok = await copyToClipboard(referralCode);
+    if (ok) {
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    }
   };
 
   const handleShareWhatsApp = () => {
-    if (cleanPhone.length !== 10) {
-      alert('Please enter your 10-digit WhatsApp number first.');
-      return;
-    }
+    if (!referralLink || !referralCode) return;
     const message =
       `*Hey! Check this out for cheap OTT subscriptions* ⚡%0A%0A` +
       `Netflix 4K, Amazon Prime, Hotstar & YouTube Premium starting at just *Rs.49/mo* on Subnest!%0A%0A` +
@@ -140,81 +248,127 @@ export const ReferEarnModal: React.FC<ReferEarnModalProps> = ({
           </button>
         </div>
 
-        {/* 1. Enter WhatsApp Number */}
-        <div className="p-4 rounded-2xl bg-secondary/40 border border-border space-y-2">
-          <label className="block text-xs font-bold text-foreground">
-            Enter your WhatsApp Number to activate your Referral Link:
-          </label>
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">
-                +91
-              </span>
-              <input
-                type="tel"
-                maxLength={10}
-                placeholder="10-digit mobile number"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                className="storefront-field w-full pl-12 pr-3 py-2.5 text-sm bg-background border border-input text-foreground focus:outline-none focus:border-primary rounded-xl font-mono font-semibold"
-              />
+        {/* ───────── STEP 1: PHONE INPUT / EDIT STATE ───────── */}
+        {(!activePhone || isEditing) ? (
+          <form onSubmit={handleGenerate} className="p-4 sm:p-5 rounded-2xl bg-secondary/40 border border-border space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-foreground">
+                Enter your WhatsApp Number to generate your link:
+              </label>
+              {activePhone && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="text-[11px] text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  Cancel
+                </button>
+              )}
             </div>
-          </div>
-          {cleanPhone.length === 10 ? (
-            <p className="text-[11px] text-emerald-500 font-medium flex items-center gap-1">
-              <Check className="w-3.5 h-3.5" />
-              <span>Referral link active & ready to share!</span>
-            </p>
-          ) : (
-            <p className="text-[11px] text-muted-foreground">
-              Aapka WhatsApp number hi aapka unique referral code hoga.
-            </p>
-          )}
-        </div>
 
-        {/* 2. Referral Link & One-Click WhatsApp Share */}
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-500/10 via-indigo-500/5 to-transparent border border-violet-500/20 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span>Your Unique Referral Link</span>
-            </span>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">
+                  +91
+                </span>
+                <input
+                  type="tel"
+                  placeholder="10-digit mobile number"
+                  value={phoneInput}
+                  onChange={(e) => {
+                    setInputError(null);
+                    setPhoneInput(normalizePhone(e.target.value));
+                  }}
+                  className="storefront-field w-full pl-12 pr-3 py-2.5 text-sm bg-background border border-input text-foreground focus:outline-none focus:border-primary rounded-xl font-mono font-semibold"
+                  autoFocus
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="py-2.5 px-5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-violet-600/25 flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Generate My Link ⚡</span>
+              </button>
+            </div>
+
+            {inputError ? (
+              <p className="text-[11px] text-destructive font-medium flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5" />
+                <span>{inputError}</span>
+              </p>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">
+                Aapka WhatsApp number hi aapka permanent referral tracking code hoga.
+              </p>
+            )}
+          </form>
+        ) : (
+          /* ───────── STEP 2: ACTIVE REFERRAL LINK & WHATSAPP SHARE ───────── */
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-violet-500/10 via-indigo-500/5 to-transparent border border-violet-500/25 space-y-3.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-emerald-500 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <span>Your Referral Link is Active & Verified</span>
+              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyCode}
+                  className="text-[11px] text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20"
+                >
+                  {copiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  <span>Code: {referralCode}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer p-1"
+                  title="Change Phone Number"
+                >
+                  <Edit2 className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+
+            {/* Generated Link Box */}
+            <div className="flex items-center gap-2 bg-background/90 border border-border rounded-xl p-2 px-3 shadow-inner">
+              <input
+                type="text"
+                readOnly
+                value={referralLink}
+                className="bg-transparent text-xs text-foreground font-mono w-full focus:outline-none select-all truncate font-medium"
+              />
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0 transition-all ${
+                  copiedLink
+                    ? 'bg-emerald-500 text-white shadow-sm'
+                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                }`}
+              >
+                {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedLink ? 'Copied Link!' : 'Copy Link'}</span>
+              </button>
+            </div>
+
+            {/* One-click WhatsApp Share */}
             <button
-              onClick={handleCopyCode}
-              className="text-[11px] text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+              type="button"
+              onClick={handleShareWhatsApp}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
             >
-              {copiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-              <span>Code: {referralCode}</span>
+              <Share2 className="w-4 h-4" />
+              <span>Share with Friends on WhatsApp</span>
             </button>
           </div>
+        )}
 
-          <div className="flex items-center gap-2 bg-background/80 border border-border rounded-xl p-2 px-3">
-            <input
-              type="text"
-              readOnly
-              value={referralLink}
-              className="bg-transparent text-xs text-foreground font-mono w-full focus:outline-none select-all truncate"
-            />
-            <button
-              onClick={handleCopyLink}
-              className="px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground text-xs font-semibold flex items-center gap-1 cursor-pointer shrink-0 transition-colors"
-            >
-              {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copiedLink ? 'Copied!' : 'Copy'}</span>
-            </button>
-          </div>
-
-          <button
-            onClick={handleShareWhatsApp}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
-          >
-            <Share2 className="w-4 h-4" />
-            <span>Share with Friends on WhatsApp</span>
-          </button>
-        </div>
-
-        {/* 3. Live Wallet Card */}
-        {cleanPhone.length === 10 && (
+        {/* ───────── 3. LIVE WALLET & EARNINGS CARD ───────── */}
+        {activePhone && (
           <div className="p-4 rounded-2xl bg-secondary/50 border border-border space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -285,7 +439,7 @@ export const ReferEarnModal: React.FC<ReferEarnModalProps> = ({
           </div>
         )}
 
-        {/* 4. How It Works: 3 Simple Steps */}
+        {/* ───────── 4. HOW IT WORKS: 3 SIMPLE STEPS ───────── */}
         <div className="space-y-2 pt-1">
           <p className="text-xs font-bold text-foreground">How Model 1 (Dual ₹20) Works:</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">

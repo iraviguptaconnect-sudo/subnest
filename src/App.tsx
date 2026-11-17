@@ -206,12 +206,30 @@ export const App: React.FC = () => {
   // Capture Referral code from query parameter (?ref=...)
   useEffect(() => {
     try {
-      const params = new URLSearchParams(window.location.search);
-      const ref = params.get('ref');
+      const searchParams = new URLSearchParams(window.location.search);
+      let ref = searchParams.get('ref');
+
+      // Also check hash in case URL was formatted as /#/?ref=... or /#product-xxx?ref=...
+      if (!ref && window.location.hash.includes('ref=')) {
+        const queryPart = window.location.hash.split('?')[1];
+        if (queryPart) {
+          ref = new URLSearchParams(queryPart).get('ref');
+        }
+      }
+
       if (ref) {
         const clean = ref.trim();
         sessionStorage.setItem('subnest_referral_code', clean);
+        localStorage.setItem('subnest_referral_code', clean);
         setReferralBanner(clean);
+      } else {
+        // Restore from storage if previously captured in this session
+        const stored =
+          sessionStorage.getItem('subnest_referral_code') ||
+          localStorage.getItem('subnest_referral_code');
+        if (stored && !stored.toUpperCase().includes('SUBNEST10')) {
+          setReferralBanner(stored);
+        }
       }
     } catch {}
   }, []);

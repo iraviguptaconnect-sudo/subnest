@@ -13,6 +13,15 @@ export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ onShopNow }) =
   useEffect(() => {
     // Check if dismissed recently (within last 6 hours) or already seen in this session
     try {
+      // If user arrived via a friend's referral link, do not pop up and do not overwrite friend's referral
+      const hasUrlRef = window.location.search.includes('ref=') || window.location.hash.includes('ref=');
+      const activeRef =
+        sessionStorage.getItem('subnest_referral_code') ||
+        localStorage.getItem('subnest_referral_code');
+      if (hasUrlRef || (activeRef && !activeRef.toUpperCase().includes('SUBNEST10'))) {
+        return;
+      }
+
       const closedTime = localStorage.getItem('subnest_promo_closed_time');
       if (closedTime) {
         const diff = Date.now() - parseInt(closedTime, 10);
@@ -48,7 +57,13 @@ export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ onShopNow }) =
 
   const handleApplyAndShop = () => {
     try {
-      sessionStorage.setItem('subnest_referral_code', 'SUBNEST10');
+      const activeRef =
+        sessionStorage.getItem('subnest_referral_code') ||
+        localStorage.getItem('subnest_referral_code');
+      if (!activeRef || activeRef.toUpperCase().includes('SUBNEST10')) {
+        sessionStorage.setItem('subnest_referral_code', 'SUBNEST10');
+        localStorage.setItem('subnest_referral_code', 'SUBNEST10');
+      }
       navigator.clipboard.writeText('SUBNEST10');
     } catch {}
     setCopied(true);
@@ -61,7 +76,13 @@ export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ onShopNow }) =
   const handleCopyOnly = () => {
     try {
       navigator.clipboard.writeText('SUBNEST10');
-      sessionStorage.setItem('subnest_referral_code', 'SUBNEST10');
+      const activeRef =
+        sessionStorage.getItem('subnest_referral_code') ||
+        localStorage.getItem('subnest_referral_code');
+      if (!activeRef || activeRef.toUpperCase().includes('SUBNEST10')) {
+        sessionStorage.setItem('subnest_referral_code', 'SUBNEST10');
+        localStorage.setItem('subnest_referral_code', 'SUBNEST10');
+      }
     } catch {}
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

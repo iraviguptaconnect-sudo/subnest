@@ -94,10 +94,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const amountToPay = Math.max(29, basePrice - referralDiscount - walletDiscount);
   const totalSavings = (basePrice - amountToPay);
 
-  // Auto-apply referral or promo code from sessionStorage or URL query param if present
+  // Auto-apply referral or promo code from sessionStorage/localStorage or URL query param if present
   useEffect(() => {
     try {
-      const storedRef = sessionStorage.getItem('subnest_referral_code');
+      const storedRef =
+        sessionStorage.getItem('subnest_referral_code') ||
+        localStorage.getItem('subnest_referral_code');
       if (storedRef && !appliedReferral) {
         setAppliedReferral(storedRef);
         setReferralInput(storedRef);
@@ -139,6 +141,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       setReferralMsg({ type: 'success', text: `Coupon "${codeUpper}" applied: 10% OFF (-₹${discount})!` });
       try {
         sessionStorage.setItem('subnest_referral_code', codeUpper);
+        localStorage.setItem('subnest_referral_code', codeUpper);
       } catch {}
       return;
     }
@@ -155,6 +158,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setAppliedReferral(cleanCode);
     try {
       sessionStorage.setItem('subnest_referral_code', cleanCode);
+      localStorage.setItem('subnest_referral_code', cleanCode);
     } catch {}
     setReferralMsg({ type: 'success', text: `Referral code "${cleanCode}" applied: Flat ₹20 OFF!` });
   };
@@ -165,6 +169,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setReferralMsg(null);
     try {
       sessionStorage.removeItem('subnest_referral_code');
+      localStorage.removeItem('subnest_referral_code');
     } catch {}
   };
 
@@ -744,7 +749,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       type="button"
                       onClick={() => {
                         const cleanP = phone.replace(/\D/g, '').slice(-10);
-                        const link = `${window.location.origin}?ref=${cleanP}`;
+                        const origin = (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost'))
+                          ? window.location.origin
+                          : 'https://www.subnests.in';
+                        const link = `${origin}/?ref=${cleanP}`;
                         const msg = `*Hey! Check this out for cheap OTT subscriptions* ⚡%0ANetflix 4K, Amazon Prime, Hotstar & YouTube starting at *Rs.49/mo* on Subnest!%0A%0A🎁 *Use my referral link for FLAT Rs.20 OFF:*%0A${link}%0A%0A100% replacement warranty & instant WhatsApp delivery!`;
                         window.open(`https://wa.me/?text=${msg}`, '_blank');
                       }}
@@ -757,7 +765,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       type="button"
                       onClick={() => {
                         const cleanP = phone.replace(/\D/g, '').slice(-10);
-                        const link = `${window.location.origin}?ref=${cleanP}`;
+                        const origin = (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost'))
+                          ? window.location.origin
+                          : 'https://www.subnests.in';
+                        const link = `${origin}/?ref=${cleanP}`;
                         navigator.clipboard.writeText(link);
                         setCopiedReferralLink(true);
                         setTimeout(() => setCopiedReferralLink(false), 2000);
