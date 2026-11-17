@@ -356,7 +356,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         
         {/* Top Header */}
         <div className="flex items-center justify-between pb-3 mb-4 border-b border-border">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             {step === 2 && !isSuccess && (
               <button
                 onClick={() => setStep(1)}
@@ -364,6 +364,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
+            )}
+            {product?.image && (
+              <div className="w-9 h-9 rounded-xl bg-background/80 border border-border p-1 shrink-0 flex items-center justify-center overflow-hidden">
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="w-full h-full object-contain"
+                />
+              </div>
             )}
             <div>
               <h3 className="text-sm font-bold text-foreground">
@@ -533,8 +542,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             {/* Order summary box */}
             <div className="bg-secondary/40 border border-border rounded-2xl p-4 space-y-2">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{itemName}</span>
-                <span className="font-semibold text-foreground">₹{basePrice}</span>
+                <div className="flex items-center gap-2 truncate pr-2">
+                  {product?.image && (
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="w-5 h-5 rounded object-contain shrink-0"
+                    />
+                  )}
+                  <span className="truncate">{itemName}</span>
+                </div>
+                <span className="font-semibold text-foreground shrink-0">₹{basePrice}</span>
               </div>
 
               {referralDiscount > 0 && (
@@ -584,12 +602,23 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           <form onSubmit={handlePaymentSubmit} className="space-y-4 flex-1">
             {/* Amount Banner + Urgency Countdown */}
             <div className="rounded-2xl bg-secondary/60 border border-border p-4 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-muted-foreground">Total to Pay</span>
-                <p className="text-xs text-foreground font-medium">{itemName}</p>
-                <div className="mt-1 flex items-center gap-1 text-[11px] font-mono text-amber-500 font-semibold">
-                  <Timer className="w-3 h-3 animate-spin" />
-                  <span>Session expires in {formatTimer(timeLeft)}</span>
+              <div className="flex items-center gap-3">
+                {product?.image && (
+                  <div className="w-10 h-10 rounded-xl bg-background border border-border p-1.5 shrink-0 flex items-center justify-center">
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                )}
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground">Total to Pay</span>
+                  <p className="text-xs text-foreground font-medium">{itemName}</p>
+                  <div className="mt-1 flex items-center gap-1 text-[11px] font-mono text-amber-500 font-semibold">
+                    <Timer className="w-3 h-3 animate-spin" />
+                    <span>Session expires in {formatTimer(timeLeft)}</span>
+                  </div>
                 </div>
               </div>
               <span className="text-3xl font-black text-primary">₹{amountToPay}</span>

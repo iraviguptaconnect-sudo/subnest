@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Search, CheckCircle, Clock, AlertTriangle, MessageCircle, Database } from 'lucide-react';
 import { lookupOrderInSupabase } from '../lib/supabase';
+import { PRODUCTS } from '../data/products';
 
 interface OrderTrackingModalProps {
   isOpen: boolean;
@@ -109,7 +110,24 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ isOpen, 
         {searched && foundOrder && (
           <div className="rounded-2xl bg-secondary/40 border border-border p-4 space-y-3">
             <div className="flex items-center justify-between border-b border-border pb-2">
-              <span className="text-xs font-bold text-foreground truncate max-w-[200px]">{foundOrder.itemName}</span>
+              <div className="flex items-center gap-2 truncate max-w-[220px]">
+                {(() => {
+                  const lower = (foundOrder.itemName || '').toLowerCase();
+                  const matched = PRODUCTS.find((p) =>
+                    lower.includes(p.name.toLowerCase()) ||
+                    lower.includes(p.id.toLowerCase()) ||
+                    p.name.toLowerCase().includes(lower)
+                  );
+                  return matched ? (
+                    <img
+                      src={matched.image}
+                      alt=""
+                      className="w-5 h-5 rounded object-contain bg-background/80 p-0.5 border border-border shrink-0"
+                    />
+                  ) : null;
+                })()}
+                <span className="text-xs font-bold text-foreground truncate">{foundOrder.itemName}</span>
+              </div>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
                 {foundOrder.status}
               </span>

@@ -418,6 +418,17 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
     return true;
   });
 
+  const getProductImage = (name: string): string | null => {
+    if (!name) return null;
+    const lower = name.toLowerCase();
+    const found = products.find((p) => {
+      const pName = p.name.toLowerCase();
+      const pId = p.id.toLowerCase();
+      return lower.includes(pName) || pName.includes(lower) || lower.includes(pId);
+    });
+    return found ? found.image : null;
+  };
+
   // Filtered products
   const categories = ['All', 'OTT', 'AI & Tools', 'Music', 'Regional', 'Entertainment', 'Special'];
   const filteredProducts = products.filter((p) => {
@@ -835,6 +846,13 @@ export const AdminOrdersModal: React.FC<AdminOrdersModalProps> = ({
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-2.5">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-mono text-xs font-bold text-primary">{order.order_id}</span>
+                          {getProductImage(order.product_name) && (
+                            <img
+                              src={getProductImage(order.product_name)!}
+                              alt=""
+                              className="w-5 h-5 rounded object-contain bg-background/80 p-0.5 border border-border shrink-0"
+                            />
+                          )}
                           <span className="text-xs font-semibold text-foreground">{order.product_name}</span>
                           {refMeta && (
                             <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">
