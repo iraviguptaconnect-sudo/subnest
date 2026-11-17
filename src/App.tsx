@@ -203,17 +203,26 @@ export const App: React.FC = () => {
     };
   }, [products]);
 
-  // Capture Referral code from query parameter (?ref=...)
+  // Capture Referral code from query parameter (?refer_and_earn=... or ?ref=...)
   useEffect(() => {
     try {
       const searchParams = new URLSearchParams(window.location.search);
-      let ref = searchParams.get('ref');
+      let ref =
+        searchParams.get('refer_and_earn') ||
+        searchParams.get('refer-and-earn') ||
+        searchParams.get('refer') ||
+        searchParams.get('ref');
 
-      // Also check hash in case URL was formatted as /#/?ref=... or /#product-xxx?ref=...
-      if (!ref && window.location.hash.includes('ref=')) {
+      // Also check hash in case URL was formatted as /#/?refer_and_earn=... or /#/?ref=...
+      if (!ref && (window.location.hash.includes('ref=') || window.location.hash.includes('refer'))) {
         const queryPart = window.location.hash.split('?')[1];
         if (queryPart) {
-          ref = new URLSearchParams(queryPart).get('ref');
+          const hashParams = new URLSearchParams(queryPart);
+          ref =
+            hashParams.get('refer_and_earn') ||
+            hashParams.get('refer-and-earn') ||
+            hashParams.get('refer') ||
+            hashParams.get('ref');
         }
       }
 
@@ -344,20 +353,28 @@ export const App: React.FC = () => {
 
           {/* Floating Top Referral Toast (if user arrived via a friend's referral link) */}
           {referralBanner && (
-            <div className="fixed top-20 sm:top-24 left-1/2 -translate-x-1/2 z-40 max-w-md w-[92%] px-4 py-2.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 backdrop-blur-xl shadow-xl flex items-center justify-between gap-2 text-xs text-emerald-400 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="fixed top-20 sm:top-24 left-1/2 -translate-x-1/2 z-40 max-w-lg w-[94%] px-4 py-2.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/35 backdrop-blur-xl shadow-xl flex items-center justify-between gap-2 text-xs text-emerald-400 animate-in fade-in slide-in-from-top-4 duration-300">
               <div className="flex items-center gap-2 truncate">
-                <span className="text-base">🎁</span>
+                <span className="text-base shrink-0">🎁</span>
                 <span className="truncate">
-                  Referral Active: <strong>Flat ₹20 OFF</strong> applied at checkout!
+                  <strong>Refer & Earn Active:</strong> Flat ₹20 OFF applied at checkout!
                 </span>
               </div>
-              <button
-                onClick={() => setReferralBanner(null)}
-                className="text-emerald-400/80 hover:text-emerald-400 p-1 cursor-pointer shrink-0"
-                title="Dismiss"
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => setIsReferralOpen(true)}
+                  className="px-2 py-0.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-bold text-[11px] underline cursor-pointer"
+                >
+                  Earn ₹20 Too →
+                </button>
+                <button
+                  onClick={() => setReferralBanner(null)}
+                  className="text-emerald-400/80 hover:text-emerald-400 p-1 cursor-pointer"
+                  title="Dismiss"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
           )}
 

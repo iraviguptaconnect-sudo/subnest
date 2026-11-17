@@ -781,8 +781,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         const origin = (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost'))
                           ? window.location.origin
                           : 'https://www.subnests.in';
-                        const link = `${origin}/?ref=${cleanP}`;
-                        const msg = `*Hey! Check this out for cheap OTT subscriptions* ⚡%0ANetflix 4K, Amazon Prime, Hotstar & YouTube starting at *Rs.49/mo* on Subnest!%0A%0A🎁 *Use my referral link for FLAT Rs.20 OFF:*%0A${link}%0A%0A100% replacement warranty & instant WhatsApp delivery!`;
+                        const link = `${origin}/?refer_and_earn=${cleanP}&ref=${cleanP}`;
+                        const msg =
+                          `🔥 *SUBNEST REFER & EARN SPECIAL OFFER* 🎁%0A%0A` +
+                          `Dosto ke liye exclusive OTT & AI Tool Deals! ⚡%0A` +
+                          `Netflix 4K UHD, Prime Video, Hotstar & YouTube Premium starting @ *just ₹49/month*!%0A%0A` +
+                          `🎁 *Refer & Earn Exclusive Link:*%0A` +
+                          `Click karo aur direct *FLAT ₹20 OFF* paao apne pehle order par:%0A` +
+                          `👉 ${link}%0A%0A` +
+                          `Or use Refer & Earn Promo Code at checkout:%0A` +
+                          `🎟️ *Code: ${cleanP}*%0A%0A` +
+                          `✅ 100% Replacement Warranty & Instant WhatsApp Delivery!`;
                         window.open(`https://wa.me/?text=${msg}`, '_blank');
                       }}
                       className="flex-1 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
@@ -797,7 +806,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         const origin = (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost'))
                           ? window.location.origin
                           : 'https://www.subnests.in';
-                        const link = `${origin}/?ref=${cleanP}`;
+                        const link = `${origin}/?refer_and_earn=${cleanP}&ref=${cleanP}`;
                         navigator.clipboard.writeText(link);
                         setCopiedReferralLink(true);
                         setTimeout(() => setCopiedReferralLink(false), 2000);
