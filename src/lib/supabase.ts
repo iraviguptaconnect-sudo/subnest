@@ -171,6 +171,102 @@ export async function fetchUserWallet(phone: string): Promise<WalletData> {
 }
 
 /**
+ * Convert a user's phone to a stylish, private referral code.
+ * e.g. '7032996297' -> 'NEST-38B9IO9'
+ * Keeps phone number 100% private in public share links!
+ */
+export function phoneToReferralCode(phone: string): string {
+  const digits = phone.replace(/\D/g, '').slice(-10);
+  if (digits.length !== 10) return '';
+  const num = parseInt(digits, 10);
+  if (isNaN(num)) return '';
+  return 'NEST-' + num.toString(36).toUpperCase();
+}
+
+/**
+ * Resolve a referral code (or phone) to the owner's 10-digit phone number.
+ * Supports:
+ *  1. 'NEST-38B9IO9' (deterministic base36 reversible decoding)
+ *  2. Direct 10-digit phone number (legacy fallback)
+ *  3. Cloud mapped codes via __REFCODE_... in Supabase
+ */
+export async function resolveReferrerPhone(codeOrPhone: string): Promise<string | null> {
+  if (!codeOrPhone) return null;
+  const raw = codeOrPhone.trim().toUpperCase();
+
+  // 1. Deterministic NEST- base36 decoding
+  if (raw.startsWith('NEST-')) {
+    const part = raw.replace('NEST-', '');
+    try {
+      const num = parseInt(part, 36);
+      if (!isNaN(num) && num >= 5000000000 && num <= 9999999999) {
+        return num.toString();
+      }
+    } catch {}
+  }
+
+  // 2. Direct 10-digit phone number
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 10) {
+    return digits;
+  }
+
+  // 3. Cloud mapped code in Supabase (__REFCODE_...)
+  try {
+    const key = '__REFCODE_' + raw;
+    const { data, error } = await supabase
+      .from('orders')
+      .select('customer_phone')
+      .eq('order_id', key)
+      .maybeSingle();
+
+    if (!error && data && data.customer_phone) {
+      const p = data.customer_phone.replace(/\D/g, '').slice(-10);
+      if (p.length === 10) return p;
+    }
+  } catch {}
+
+  return null;
+}
+
+/**
+ * Register or sync a referral code mapping in Supabase
+ */
+export async function registerReferralCode(phone: string, code: string): Promise<boolean> {
+  const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+  const cleanCode = code.trim().toUpperCase();
+  if (cleanPhone.length !== 10 || !cleanCode) return false;
+
+  try {
+    const key = '__REFCODE_' + cleanCode;
+    await supabase.from('orders').upsert(
+      {
+        order_id: key,
+        product_name: 'SUBNEST_REFERRAL_CODE',
+        plan_duration: 'MAPPING',
+        amount: 0,
+        customer_name: `Referral Code: ${cleanCode}`,
+        customer_phone: cleanPhone,
+        customer_email: `${cleanPhone}@subnest.internal`,
+        utr_number: 'CODE_MAPPING',
+        payment_method: 'referral_code',
+        status: 'verified',
+        credentials_note: JSON.stringify({
+          code: cleanCode,
+          phone: cleanPhone,
+          created_at: new Date().toISOString(),
+        }),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'order_id' }
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Credit Referral Bonus (e.g. ₹20) to the Referrer's Wallet
  */
 export async function creditReferralBonus(
@@ -179,8 +275,9 @@ export async function creditReferralBonus(
   orderId: string,
   bonus: number = 20
 ): Promise<boolean> {
-  const cleanPhone = referrerPhoneOrCode.replace(/\D/g, '').slice(-10);
-  if (!cleanPhone || cleanPhone.length < 10) return false;
+  const resolvedPhone = await resolveReferrerPhone(referrerPhoneOrCode);
+  if (!resolvedPhone || resolvedPhone.length < 10) return false;
+  const cleanPhone = resolvedPhone;
 
   try {
     const key = '__WALLET_' + cleanPhone;

@@ -23,6 +23,7 @@ import {
   fetchUserWallet,
   deductWalletCredits,
   WalletData,
+  phoneToReferralCode,
 } from '../lib/supabase';
 
 interface CheckoutModalProps {
@@ -147,10 +148,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
 
     const cleanUserPhone = phone.replace(/\D/g, '').slice(-10);
-    const cleanInputPhone = cleanCode.replace(/\D/g, '').slice(-10);
+    const userRefCode = cleanUserPhone ? phoneToReferralCode(cleanUserPhone) : '';
 
-    // Self-referral prevention
-    if (cleanUserPhone && cleanInputPhone && cleanUserPhone === cleanInputPhone) {
+    // Self-referral prevention (checks phone or private VIP code)
+    if (
+      (cleanUserPhone && cleanCode === cleanUserPhone) ||
+      (userRefCode && cleanCode.toUpperCase() === userRefCode.toUpperCase())
+    ) {
       setReferralMsg({ type: 'error', text: 'You cannot use your own referral code!' });
       return;
     }
@@ -778,19 +782,20 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       type="button"
                       onClick={() => {
                         const cleanP = phone.replace(/\D/g, '').slice(-10);
+                        const userRefCode = phoneToReferralCode(cleanP);
                         const origin = (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost'))
                           ? window.location.origin
                           : 'https://www.subnests.in';
-                        const link = `${origin}/?refer_and_earn=${cleanP}&ref=${cleanP}`;
+                        const link = `${origin}/?refer_and_earn=${userRefCode}&ref=${userRefCode}`;
                         const msg =
                           `🔥 *SUBNEST REFER & EARN SPECIAL OFFER* 🎁%0A%0A` +
                           `Dosto ke liye exclusive OTT & AI Tool Deals! ⚡%0A` +
                           `Netflix 4K UHD, Prime Video, Hotstar & YouTube Premium starting @ *just ₹49/month*!%0A%0A` +
-                          `🎁 *Refer & Earn Exclusive Link:*%0A` +
+                          `🎁 *Refer & Earn VIP Link:*%0A` +
                           `Click karo aur direct *FLAT ₹20 OFF* paao apne pehle order par:%0A` +
                           `👉 ${link}%0A%0A` +
                           `Or use Refer & Earn Promo Code at checkout:%0A` +
-                          `🎟️ *Code: ${cleanP}*%0A%0A` +
+                          `🎟️ *Code: ${userRefCode}*%0A%0A` +
                           `✅ 100% Replacement Warranty & Instant WhatsApp Delivery!`;
                         window.open(`https://wa.me/?text=${msg}`, '_blank');
                       }}
@@ -803,10 +808,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       type="button"
                       onClick={() => {
                         const cleanP = phone.replace(/\D/g, '').slice(-10);
+                        const userRefCode = phoneToReferralCode(cleanP);
                         const origin = (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost'))
                           ? window.location.origin
                           : 'https://www.subnests.in';
-                        const link = `${origin}/?refer_and_earn=${cleanP}&ref=${cleanP}`;
+                        const link = `${origin}/?refer_and_earn=${userRefCode}&ref=${userRefCode}`;
                         navigator.clipboard.writeText(link);
                         setCopiedReferralLink(true);
                         setTimeout(() => setCopiedReferralLink(false), 2000);

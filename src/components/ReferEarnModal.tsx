@@ -18,9 +18,15 @@ import {
   Send,
   Flame,
   TrendingUp,
+  Lock,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { fetchUserWallet, WalletData } from '../lib/supabase';
+import {
+  fetchUserWallet,
+  WalletData,
+  phoneToReferralCode,
+  registerReferralCode,
+} from '../lib/supabase';
 
 interface ReferEarnModalProps {
   isOpen: boolean;
@@ -141,18 +147,18 @@ export const ReferEarnModal: React.FC<ReferEarnModalProps> = ({
       ? window.location.origin
       : 'https://www.subnests.in';
 
-  // Branded Refer & Earn Link explicitly displaying "refer_and_earn" in the query string
-  const referralLink = activePhone
-    ? `${siteUrl}/?refer_and_earn=${activePhone}&ref=${activePhone}`
+  // Private, stylish branded referral code (NO phone number exposed)
+  const referralCode = activePhone ? phoneToReferralCode(activePhone) : '';
+  const referralLink = referralCode
+    ? `${siteUrl}/?refer_and_earn=${referralCode}&ref=${referralCode}`
     : '';
-  const referralCode = activePhone;
 
-  // Viral pre-formatted message
+  // Viral pre-formatted message with privacy-protected VIP referral code
   const fullShareText =
     `🔥 *SUBNEST REFER & EARN SPECIAL OFFER* 🎁\n\n` +
     `Dosto ke liye exclusive OTT & AI Tool Deals! ⚡\n` +
     `Netflix 4K UHD, Prime Video, JioHotstar, YouTube Premium & ChatGPT starting @ *just ₹49/month*!\n\n` +
-    `🎁 *Refer & Earn Exclusive Link:*\n` +
+    `🎁 *Refer & Earn VIP Link:*\n` +
     `Click karo aur direct *FLAT ₹20 OFF* paao apne pehle order par:\n` +
     `👉 ${referralLink}\n\n` +
     `Or use Refer & Earn Promo Code at checkout:\n` +
@@ -171,11 +177,13 @@ export const ReferEarnModal: React.FC<ReferEarnModalProps> = ({
       return;
     }
 
+    const genCode = phoneToReferralCode(clean);
     setActivePhone(clean);
     setIsEditing(false);
 
     try {
       localStorage.setItem('subnest_referral_owner_phone', clean);
+      localStorage.setItem('subnest_referral_owner_code', genCode);
       const existing = localStorage.getItem('subnest_user_profile');
       if (existing) {
         const parsed = JSON.parse(existing);
@@ -188,8 +196,11 @@ export const ReferEarnModal: React.FC<ReferEarnModalProps> = ({
       }
     } catch {}
 
+    // Register code in cloud DB
+    registerReferralCode(clean, genCode);
+
     // Auto copy generated link to clipboard & fire celebration
-    const genLink = `${siteUrl}/?refer_and_earn=${clean}&ref=${clean}`;
+    const genLink = `${siteUrl}/?refer_and_earn=${genCode}&ref=${genCode}`;
     copyToClipboard(genLink);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2500);
@@ -332,8 +343,9 @@ export const ReferEarnModal: React.FC<ReferEarnModalProps> = ({
                 <span>{inputError}</span>
               </p>
             ) : (
-              <p className="text-[11px] text-muted-foreground">
-                Aapka WhatsApp number hi aapka unique referral code hoga jisse aapke wallet me paise add honge.
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span>Aapka number 100% private rahega. Public share link me stylish VIP code (e.g. NEST-XXXX) use hoga.</span>
               </p>
             )}
           </form>
@@ -354,7 +366,7 @@ export const ReferEarnModal: React.FC<ReferEarnModalProps> = ({
                   title="Click to copy Promo Code"
                 >
                   {copiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                  <span>Code: <strong>{referralCode}</strong></span>
+                  <span>VIP Code: <strong>{referralCode}</strong></span>
                 </button>
                 <button
                   type="button"
@@ -365,6 +377,12 @@ export const ReferEarnModal: React.FC<ReferEarnModalProps> = ({
                   <Edit2 className="w-3 h-3" />
                 </button>
               </div>
+            </div>
+
+            {/* Privacy protected note */}
+            <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl">
+              <Lock className="w-3.5 h-3.5 shrink-0" />
+              <span><strong>100% Privacy Protected:</strong> Aapka phone number link me kahi bhi nahi hai. Sabhi jagah aapka VIP Code: <strong>{referralCode}</strong> share hoga!</span>
             </div>
 
             {/* Branded Link Display Box */}
