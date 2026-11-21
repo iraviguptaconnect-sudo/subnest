@@ -161,6 +161,54 @@ export const PRODUCTS: Product[] = [
     ]
   },
   {
+    id: 'spotify',
+    name: 'Spotify Premium Individual',
+    category: 'Music',
+    tagline: 'Ad-Free Songs, Offline Downloads & Extreme Quality',
+    description: 'Listen to 100M+ songs and podcasts completely ad-free. Download your favorite tracks for offline listening and enjoy 320kbps extreme audio on all your devices.',
+    image: '/subsplit-assets/spotify-eBjxoM9M.png',
+    popular: true,
+    deliveryType: 'On Your Account',
+    devices: 'Mobile, Desktop, Web, TV & Smartwatch',
+    features: [
+      '100% Ad-Free Music & Podcast Streaming',
+      'Download Unlimited Songs for Offline Playback',
+      'Unlimited Skips & On-Demand Song Selection',
+      'Highest 320 kbps Extreme Hi-Fi Audio Quality',
+      'Activated Directly On Your Own Account',
+      '100% Replacement Warranty for Full Duration'
+    ],
+    plans: [
+      { id: 'sp-3m', duration: '3 Months', price: 49, originalPrice: 389, badge: 'Hot Deal' },
+      { id: 'sp-6m', duration: '6 Months', price: 99, originalPrice: 719 },
+      { id: 'sp-12m', duration: '12 Months (Annual)', price: 189, originalPrice: 1189, badge: 'Best Value' }
+    ]
+  },
+  {
+    id: 'apple-music',
+    name: 'Apple Music + Classical',
+    category: 'Music',
+    tagline: 'Lossless Audio, Dolby Atmos Spatial & 100M+ Songs',
+    description: 'Immerse in Spatial Audio with Dolby Atmos and Lossless Audio across 100 million songs. Stream on Android, iPhone, Windows, Mac, iPad, and Apple Watch.',
+    image: '/subsplit-assets/applemusic-5o-HWu2G.png',
+    popular: true,
+    deliveryType: 'Direct Link / Family Invite',
+    devices: 'Android, iPhone, Mac, Windows & TV',
+    features: [
+      'Over 100 Million Songs Completely Ad-Free',
+      'Spatial Audio with Dolby Atmos & Hi-Res Lossless',
+      'Time-Synced Lyrics & Sing Karaoke Mode',
+      'Download Songs for Offline Listening Anywhere',
+      'Official Access on Your Apple ID / Email',
+      'Full Duration Replacement Warranty & WhatsApp Support'
+    ],
+    plans: [
+      { id: 'am-5m', duration: '5 Months', price: 79, originalPrice: 499, badge: 'Special' },
+      { id: 'am-1m', duration: '1 Month', price: 29, originalPrice: 99 },
+      { id: 'am-12m', duration: '12 Months (Annual)', price: 179, originalPrice: 999, badge: 'Best Value' }
+    ]
+  },
+  {
     id: 'chatgpt-plus',
     name: 'ChatGPT Plus (GPT-4o)',
     category: 'AI & Tools',
@@ -186,17 +234,18 @@ export const PRODUCTS: Product[] = [
     id: 'linkedin-premium',
     name: 'LinkedIn Premium & Sales Navigator',
     category: 'Special',
-    tagline: 'Business, Career, Learning & Sales Nav',
-    description: 'Official LinkedIn upgrade for New & Old users. Unlimited InMails, Who Viewed Your Profile, 16,000+ LinkedIn Learning certificates, and Sales Navigator lead filters.',
+    tagline: 'Business, Career, Learning, Sales Nav & Recruiter',
+    description: 'Official LinkedIn upgrade for New & Old users. Unlimited InMails, Who Viewed Your Profile, 16,000+ LinkedIn Learning certificates, Recruiter Lite, and Sales Navigator lead filters.',
     image: '/subsplit-assets/linkedin.svg',
     popular: true,
     deliveryType: 'Direct Link / Invite',
     devices: 'LinkedIn Web, iOS & Android',
     features: [
-      'Direct InMail credits to message any recruiter or client',
+      'Direct InMail credits to message any recruiter, client or candidate',
       'See who viewed your profile in the last 365 days',
       '16,000+ LinkedIn Learning courses with certificate badge',
       'Sales Navigator Core & Advanced filters for prospecting',
+      'Recruiter Lite talent sourcing with advanced candidate filters',
       'Plans available for both New Accounts & Existing/Old Accounts',
       '100% Replacement Warranty & WhatsApp Support'
     ],
@@ -207,10 +256,35 @@ export const PRODUCTS: Product[] = [
       { id: 'li-new-sn-2m', duration: 'Sales Navigator Core – 2M (New User)', price: 1500, originalPrice: 9999, badge: 'Sales Nav' },
       { id: 'li-new-sn-3m', duration: 'Sales Navigator Core – 3M (New User)', price: 2800, originalPrice: 14999, badge: 'Sales Nav' },
       { id: 'li-old-learn-2m', duration: 'LinkedIn Learning – 2M (Old User)', price: 800, originalPrice: 2499, badge: 'Learning' },
-      { id: 'li-old-biz-duo-2m', duration: 'Business Premium Duo – 2M (Old User)', price: 1499, originalPrice: 4999, badge: 'Duo' },
-      { id: 'li-old-car-duo-2m', duration: 'Career Premium Duo – 2M (Old User)', price: 1299, originalPrice: 3999, badge: 'Duo' },
-      { id: 'li-old-car-12m', duration: 'Career Premium Direct Link – 12M', price: 9500, originalPrice: 24999, badge: '12 Months' },
-      { id: 'li-old-sn-adv-1m', duration: 'Sales Navigator Adv – 1M (Old User)', price: 2100, originalPrice: 8999, badge: 'Advanced' }
+      { id: 'li-old-biz-duo-2m', duration: 'Business Premium Duo (2 users)', price: 1399, originalPrice: 4999, badge: 'Duo' },
+      { id: 'li-old-car-duo-2m', duration: 'Career Premium Duo (2 users)', price: 1199, originalPrice: 3999, badge: 'Duo' },
+      { id: 'li-career-12m', duration: 'Career Premium – 12 Months', price: 3999, originalPrice: 14999, badge: '1 Year' },
+      { id: 'li-old-biz-12m', duration: 'Business Premium – 12 Months (Old User)', price: 4999, originalPrice: 18999, badge: '1 Year' },
+      { id: 'li-old-sn-adv-1m', duration: 'Sales Navigator (Old User)', price: 1700, originalPrice: 8999, badge: 'Sales Nav' },
+      { id: 'li-recruiter-lite', duration: 'Recruiter Lite – 1 Month', price: 1499, originalPrice: 9999, badge: 'Recruiter' }
+    ]
+  },
+  {
+    id: 'linkedin-recruiter-lite',
+    name: 'LinkedIn Recruiter Lite',
+    category: 'Special',
+    tagline: 'Candidate Sourcing, 30 InMails & Advanced Hiring',
+    description: 'Find and contact top talent faster with LinkedIn Recruiter Lite. Get 30 InMail messages per month, 20+ advanced candidate search filters, automatic candidate tracking, and unlimited profile views.',
+    image: '/subsplit-assets/linkedin.svg',
+    popular: true,
+    deliveryType: 'Direct Link / Invite',
+    devices: 'LinkedIn Web, iOS & Android',
+    features: [
+      '30 InMails per month to reach any professional directly',
+      'Advanced talent search with 20+ specialized hiring filters',
+      'Save candidate searches & get automatic alerts for new matches',
+      'Manage candidate pipelines and applicant tracking projects',
+      'Unlimited views of 3rd-degree network connections',
+      'Official direct activation on your personal LinkedIn account'
+    ],
+    plans: [
+      { id: 'recruiter-lite-1m', duration: '1 Month', price: 1499, originalPrice: 9999, badge: 'Recruiter' },
+      { id: 'recruiter-lite-3m', duration: '3 Months', price: 3999, originalPrice: 24999, badge: '3 Months' }
     ]
   },
   {

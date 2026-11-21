@@ -49,14 +49,19 @@ export const App: React.FC = () => {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Merge missing default products (e.g. newly added ChatGPT Plus)
-          const missing = PRODUCTS.filter((dp) => !parsed.some((p: any) => p.id === dp.id));
-          if (missing.length > 0) {
-            const merged = [...parsed, ...missing];
-            localStorage.setItem('subnest_products_catalog', JSON.stringify(merged));
-            return merged;
-          }
-          return parsed;
+          // Always ensure matching plans for updated products (e.g. LinkedIn plans/prices)
+          const updated = parsed.map((p: any) => {
+            const def = PRODUCTS.find((dp) => dp.id === p.id);
+            if (def && p.id === 'linkedin-premium') {
+              return { ...p, plans: def.plans, name: def.name, tagline: def.tagline, description: def.description, features: def.features };
+            }
+            return p;
+          });
+          // Merge missing default products (e.g. newly added Spotify, Apple Music, Recruiter Lite)
+          const missing = PRODUCTS.filter((dp) => !updated.some((p: any) => p.id === dp.id));
+          const finalCatalog = [...updated, ...missing];
+          localStorage.setItem('subnest_products_catalog', JSON.stringify(finalCatalog));
+          return finalCatalog;
         }
       } catch {}
     }
