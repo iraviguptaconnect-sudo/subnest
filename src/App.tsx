@@ -49,10 +49,10 @@ export const App: React.FC = () => {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Always ensure matching plans for updated products (e.g. LinkedIn plans/prices)
+          // Always ensure matching plans for updated products (e.g. LinkedIn, Spotify, Apple Music)
           const updated = parsed.map((p: any) => {
             const def = PRODUCTS.find((dp) => dp.id === p.id);
-            if (def && p.id === 'linkedin-premium') {
+            if (def && (p.id === 'linkedin-premium' || p.id === 'spotify' || p.id === 'apple-music' || p.id === 'linkedin-recruiter-lite')) {
               return { ...p, plans: def.plans, name: def.name, tagline: def.tagline, description: def.description, features: def.features };
             }
             return p;

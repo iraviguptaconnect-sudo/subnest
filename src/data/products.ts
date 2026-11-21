@@ -179,9 +179,7 @@ export const PRODUCTS: Product[] = [
       '100% Replacement Warranty for Full Duration'
     ],
     plans: [
-      { id: 'sp-3m', duration: '3 Months', price: 49, originalPrice: 389, badge: 'Hot Deal' },
-      { id: 'sp-6m', duration: '6 Months', price: 99, originalPrice: 719 },
-      { id: 'sp-12m', duration: '12 Months (Annual)', price: 189, originalPrice: 1189, badge: 'Best Value' }
+      { id: 'sp-3m', duration: '3 Months', price: 49, originalPrice: 389, badge: 'Hot Deal' }
     ]
   },
   {
@@ -203,9 +201,7 @@ export const PRODUCTS: Product[] = [
       'Full Duration Replacement Warranty & WhatsApp Support'
     ],
     plans: [
-      { id: 'am-5m', duration: '5 Months', price: 79, originalPrice: 499, badge: 'Special' },
-      { id: 'am-1m', duration: '1 Month', price: 29, originalPrice: 99 },
-      { id: 'am-12m', duration: '12 Months (Annual)', price: 179, originalPrice: 999, badge: 'Best Value' }
+      { id: 'am-5m', duration: '5 Months', price: 79, originalPrice: 499, badge: 'Special' }
     ]
   },
   {
